@@ -1,0 +1,18 @@
+# Secrets
+Secrets.xcconfig
+
+# Xcode Build Artifacts
+DerivedData/
+build/
+
+# Personal User Settings
+xcuserdata/
+
+# Swift Package Manager
+.build/
+.swiftpm/
+
+# macOS system files
+.DS_Store
+KitchenOS.xcodeproj
+Secrets.xconfig
