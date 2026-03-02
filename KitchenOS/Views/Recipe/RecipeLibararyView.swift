@@ -19,7 +19,23 @@ struct RecipeLibraryView: View {
     @State private var isBooksExpanded = true
     @State private var isRecipesExpanded = true
     
+    @State private var bookSearchText = ""
+    @State private var recipeSearchText = ""
+    
     let gridColumns = [GridItem(.adaptive(minimum: 160, maximum: 200), spacing: 16)]
+    
+    var filteredBooks: [RecipeBook] {
+        if bookSearchText.isEmpty { return books }
+        return books.filter { $0.title.localizedCaseInsensitiveContains(bookSearchText) }
+    }
+    
+    var filteredRecipes: [Recipe] {
+        if recipeSearchText.isEmpty { return allRecipes }
+        return allRecipes.filter { recipe in
+            recipe.summary.localizedCaseInsensitiveContains(recipeSearchText) ||
+            recipe.title.localizedCaseInsensitiveContains(recipeSearchText)
+        }
+    }
     
     var body: some View {
         NavigationStack {
@@ -48,27 +64,21 @@ struct RecipeLibraryView: View {
                             
                             Spacer()
                             
-                            Button {
-                                print("Search Cookbook Tapped")
-                            } label: {
-                                Image(systemName: "magnifyingglass")
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .foregroundStyle(.secondary)
-                            }
-                            .buttonStyle(.plain)
+                            ExpandableSearchBar(text: $bookSearchText, placeholder: "Search cookbooks...")
                         }
                         .padding(.horizontal)
                         
                         if isBooksExpanded {
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 16) {
-                                    AddPlaceholderSquare(title: "New Cookbook", icon: "folder.badge.plus") {
-                                        showingAddBookSheet = true
+                                    if isBooksExpanded {
+                                        AddPlaceholderSquare(title: "New Cookbook", icon: "folder.badge.plus") {
+                                            showingAddBookSheet = true
+                                        }
+                                        .frame(width: 160, height: 160)
                                     }
-                                    .frame(width: 160, height: 160)
-                                    .frame(maxWidth: .infinity)
                                     
-                                    ForEach(books) { book in
+                                    ForEach(filteredBooks) { book in
                                         NavigationLink(value: book) {
                                             RecipeBookSquare(book: book)
                                                 .frame(width: 160, height: 160)
@@ -119,25 +129,20 @@ struct RecipeLibraryView: View {
                             
                             Spacer()
                             
-                            Button {
-                                print("Search Recipes Tapped")
-                            } label: {
-                                Image(systemName: "magnifyingglass")
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .foregroundStyle(.secondary)
-                            }
-                            .buttonStyle(.plain)
+                            ExpandableSearchBar(text: $recipeSearchText, placeholder: "Search recipes...")
                         }
                         .padding(.horizontal)
                         
                         if isRecipesExpanded {
                             LazyVGrid(columns: gridColumns, spacing: 16) {
-                                AddPlaceholderSquare(title: "New Recipe", icon: "plus") {
-                                    showingAddRecipeSheet = true
+                                if isRecipesExpanded {
+                                    AddPlaceholderSquare(title: "New Recipe", icon: "plus") {
+                                        showingAddRecipeSheet = true
+                                    }
+                                    .frame(height: 160)
                                 }
-                                .frame(height: 160)
                                 
-                                ForEach(allRecipes) { recipe in
+                                ForEach(filteredRecipes) { recipe in
                                     NavigationLink(value: recipe) {
                                         RecipeSquare(recipe: recipe)
                                             .frame(height: 160)
@@ -168,6 +173,11 @@ struct RecipeLibraryView: View {
             }
             .sheet(isPresented: $showingAddRecipeSheet) {
                 RecipeEditorSheet()
+            }
+            .scrollDismissesKeyboard(.interactively)
+            // This forcefully drops focus if one just tap on an empty space
+            .onTapGesture {
+                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
             }
             
         }
