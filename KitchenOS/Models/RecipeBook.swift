@@ -14,7 +14,7 @@ class RecipeBook {
     var icon: String
     @Attribute(.externalStorage) var image: Data?
     
-    @Relationship(deleteRule: .nullify, inverse: \Recipe.book)
+    @Relationship(deleteRule: .cascade, inverse: \Recipe.book)
     var recipes: [Recipe]? = []
     
     init(id: UUID = UUID(), title: String, icon: String = "folder", image: Data? = nil, recipes: [Recipe]? = nil) {

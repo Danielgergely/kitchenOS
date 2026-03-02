@@ -16,3 +16,4 @@ xcuserdata/
 .DS_Store
 KitchenOS.xcodeproj
 Secrets.xconfig
+*.xcconfig

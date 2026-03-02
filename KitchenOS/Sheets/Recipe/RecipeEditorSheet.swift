@@ -44,7 +44,7 @@ struct RecipeEditorSheet: View {
     // delete stuff
     @State private var showingDeleteConfirmation = false
     var onDelete: (() -> Void)? = nil
-        
+    
     var body: some View {
         NavigationStack {
             Form {
@@ -186,28 +186,33 @@ struct RecipeEditorSheet: View {
                             .italic()
                     }
                     
-                    ForEach(tempIngredients) { ingredient in
-                        EditIngredientsRow(ingredient: ingredient) {
-                            if let idx = tempIngredients.firstIndex(where: { $0.id == ingredient.id }) {
-                                tempIngredients.remove(at: idx)
+                    Grid(horizontalSpacing: 12, verticalSpacing: 8) {
+                        GridRow {
+                            Text("Ingredient")
+                                .font(.caption.bold())
+                                .foregroundStyle(.secondary)
+                                .gridColumnAlignment(.leading)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            Text("Qty").font(.caption.bold()).foregroundStyle(.secondary)
+                            Text("Unit").font(.caption.bold()).foregroundStyle(.secondary)
+                            Color.clear.frame(width: 8)
+                        }
+                        
+                        ForEach(tempIngredients) { ingredient in
+                            EditIngredientsRow(ingredient: ingredient) {
+                                if let idx = tempIngredients.firstIndex(where: { $0.id == ingredient.id }) {
+                                    tempIngredients.remove(at: idx)
+                                }
                             }
                         }
                     }
                     Button {
                         withAnimation {
-                            let newIngredient = Ingredient(
-                                id: UUID(),
-                                name: "",
-                                amount: 1.0,
-                                unit: .piece,
-                                category: .food,
-                                tags: []
-                            )
+                            let newIngredient = Ingredient(id: UUID(), name: "", tags: [])
                             tempIngredients.append(newIngredient)
                         }
                     } label: {
                         Label("Add Ingredient", systemImage: "plus.circle.fill")
-                            .font(.headline)
                     }
                 }
                 

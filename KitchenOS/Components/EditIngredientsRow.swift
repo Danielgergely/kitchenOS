@@ -12,14 +12,24 @@ struct EditIngredientsRow: View {
     var onDelete: () -> Void
     
     var body: some View {
-        HStack(alignment: .center, spacing: 8) {
+        GridRow {
+            // Name Field
             TextField("Item (e.g. Flour)", text: $ingredient.name)
+                .textFieldStyle(.plain)
+                .padding(8)
+                .background(Color(uiColor: .secondarySystemBackground).opacity(0.5))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
             
-            Spacer()
-            
+            // Amount Field
             TextField("0", value: $ingredient.amount, format: .number)
-                .keyboardType(.numberPad)
+                .keyboardType(.decimalPad)
+                .multilineTextAlignment(.center)
+                .frame(width: 60)
+                .padding(8)
+                .background(Color(uiColor: .secondarySystemBackground).opacity(0.5))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
             
+            // Unit Picker
             Picker("Unit", selection: $ingredient.unit) {
                 ForEach(Unit.allCases, id: \.self) { unit in
                     Text(unit.rawValue).tag(unit)
@@ -27,14 +37,21 @@ struct EditIngredientsRow: View {
             }
             .labelsHidden()
             .pickerStyle(.menu)
-            .background(Color.secondary.opacity(0.1))
-            .clipShape(RoundedRectangle(cornerRadius: 6))
+            .frame(width: 100)
+            .padding(.horizontal, 4)
+            .background(Color.blue.opacity(0.1))
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .fixedSize(horizontal: true, vertical: false)
             
+            // 4. Action Button
             Button(action: onDelete) {
-                Image(systemName: "trash")
+                Image(systemName: "minus.circle.fill")
                     .foregroundStyle(.red.opacity(0.8))
+                    .font(.title3)
             }
             .buttonStyle(.plain)
+            .gridColumnAlignment(.trailing)
         }
+        .padding(.vertical, 4)
     }
 }

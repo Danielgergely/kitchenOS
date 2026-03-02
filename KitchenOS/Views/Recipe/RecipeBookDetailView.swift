@@ -9,6 +9,8 @@ import SwiftData
 
 struct RecipeBookDetailView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
+
     @Bindable var book: RecipeBook
     
     @State private var isShowingEditSheet = false
@@ -78,7 +80,9 @@ struct RecipeBookDetailView: View {
             }
         }
         .sheet(isPresented: $isShowingEditSheet) {
-            RecipeBookEditorSheet(bookToEdit: book)
+            RecipeBookEditorSheet(bookToEdit: book) {
+                dismiss()
+            }
         }
     }
 }

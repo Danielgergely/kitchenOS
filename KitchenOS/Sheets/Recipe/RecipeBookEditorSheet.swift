@@ -20,6 +20,10 @@ struct RecipeBookEditorSheet: View {
     @State private var showingImagePicker = false
     @State private var imageSourceType: UIImagePickerController.SourceType = .photoLibrary
     
+    // delete stuff
+    @State private var showingDeleteConfirmation = false
+    var onDelete: (() -> Void)? = nil
+    
     var body: some View {
         NavigationStack {
             Form {
@@ -61,6 +65,16 @@ struct RecipeBookEditorSheet: View {
                     TextField("Cookbook Title", text: $title)
                         .font(.headline)
                 }
+                if bookToEdit != nil {
+                    Section {
+                        Button(role: .destructive) {
+                            showingDeleteConfirmation = true
+                        } label: {
+                            Text("Delete Cookbook")
+                                .frame(maxWidth: .infinity, alignment: .center)
+                        }
+                    }
+                }
             }
             .navigationTitle(bookToEdit == nil ? "New Recipe Book" : "Edit Recipe Book")
             .navigationBarTitleDisplayMode(.inline)
@@ -88,6 +102,14 @@ struct RecipeBookEditorSheet: View {
                     }
                 }
                 Button("Cancel", role: .cancel) { }
+            }
+            .alert("Delete Cookbook?", isPresented: $showingDeleteConfirmation) {
+                Button("Delete", role: .destructive) {
+                    deleteBook()
+                }
+                Button("Cancel", role: .cancel) { }
+            } message:  {
+                Text("Cookbook \(bookToEdit?.title ?? "") will be deleted, along with all its recipes.")
             }
             .fullScreenCover(isPresented: $showingImagePicker) {
                 ImagePicker(image: $coverImageData, sourceType: imageSourceType)
@@ -117,6 +139,15 @@ struct RecipeBookEditorSheet: View {
         } else {
             let newBook = RecipeBook(title: title, image: coverImageData)
             modelContext.insert(newBook)
+        }
+        dismiss()
+    }
+    
+    func deleteBook() {
+        if let book = bookToEdit {
+            modelContext.delete(book)
+            try? modelContext.save()
+            onDelete?()
         }
         dismiss()
     }
