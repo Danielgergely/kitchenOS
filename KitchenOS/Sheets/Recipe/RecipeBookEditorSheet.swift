@@ -73,7 +73,7 @@ struct RecipeBookEditorSheet: View {
                     .disabled(title.isEmpty)
                 }
             }
-            .confirmationDialog("Choose Cover Photo", isPresented: $showingImageSourceDialog) {
+            .alert("Choose Cover Photo", isPresented: $showingImageSourceDialog) {
                 Button("Camera") {
                     imageSourceType = .camera
                     showingImagePicker = true

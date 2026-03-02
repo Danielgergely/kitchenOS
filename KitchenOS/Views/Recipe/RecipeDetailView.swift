@@ -130,7 +130,9 @@ struct RecipeDetailView: View {
             }
         }
         .sheet(isPresented: $isShowingEditSheet) {
-            RecipeEditorSheet(recipeToEdit: recipe)
+            RecipeEditorSheet(recipeToEdit: recipe) {
+                dismiss()
+            }
         }
     }
 }

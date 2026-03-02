@@ -38,8 +38,13 @@ struct RecipeEditorSheet: View {
     
     @State private var showingImageSourceDialog = false
     @State private var showingImagePicker = false
+    
     @State private var imageSourceType: UIImagePickerController.SourceType = .photoLibrary
     
+    // delete stuff
+    @State private var showingDeleteConfirmation = false
+    var onDelete: (() -> Void)? = nil
+        
     var body: some View {
         NavigationStack {
             Form {
@@ -218,6 +223,16 @@ struct RecipeEditorSheet: View {
                             alignment: .topLeading
                         )
                 }
+                if recipeToEdit != nil {
+                    Section {
+                        Button(role: .destructive) {
+                            showingDeleteConfirmation = true
+                        } label: {
+                            Text("Delete Recipe")
+                                .frame(maxWidth: .infinity, alignment: .center)
+                        }
+                    }
+                }
             }
             .navigationTitle(recipeToEdit == nil ? "New Recipe" : "Edit Recipe")
             .navigationBarTitleDisplayMode(.inline)
@@ -226,7 +241,7 @@ struct RecipeEditorSheet: View {
                     Button("Cancel") { dismiss() }
                 }
                 
-                // --- 2. THE SAVE BUTTON ---
+                // Save button
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") { saveRecipe() }
                         .disabled(title.isEmpty)
@@ -239,7 +254,7 @@ struct RecipeEditorSheet: View {
                 PhotosPicker("Choose from Library", selection: $aiScanPhotoItem, matching: .images)
                 Button("Cancel", role: .cancel) {}
             }
-            .confirmationDialog("Choose Cover Photo", isPresented: $showingImageSourceDialog) {
+            .alert("Choose Cover Photo", isPresented: $showingImageSourceDialog) {
                 Button("Camera") {
                     imageSourceType = .camera
                     showingImagePicker = true
@@ -254,6 +269,14 @@ struct RecipeEditorSheet: View {
                     }
                 }
                 Button("Cancel", role: .cancel) { }
+            }
+            .alert("Delete recipe?", isPresented: $showingDeleteConfirmation) {
+                Button("Delete", role: .destructive) {
+                    deleteRecipe()
+                }
+                Button("Cancel", role: .cancel) { }
+            } message:  {
+                Text("Recipe \(recipeToEdit?.title ?? "") will be deleted")
             }
             .fullScreenCover(isPresented: $showCamera) {
                 CameraView(selectedImage: Binding (
@@ -388,6 +411,14 @@ struct RecipeEditorSheet: View {
                 await MainActor.run { isScanning = false }
             }
         }
+    }
+    
+    func deleteRecipe() {
+        if let recipe = recipeToEdit {
+            modelContext.delete(recipe)
+            onDelete?()
+        }
+        dismiss()
     }
 }
 
