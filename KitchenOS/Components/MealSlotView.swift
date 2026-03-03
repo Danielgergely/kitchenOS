@@ -42,8 +42,8 @@ struct MealSlotView: View {
                             } else {
                                 ZStack {
                                     RoundedRectangle(cornerRadius: 10)
-                                        .fill(meal.isEatingOut ? Color.orange.opacity(0.2) : Color.blue.opacity(0.1))
-                                    if meal.isEatingOut {
+                                        .fill(meal.cookingType == .eatingOut ? Color.orange.opacity(0.2) : Color.blue.opacity(0.1))
+                                    if meal.cookingType == .eatingOut {
                                         Image(systemName: "fork.knife")
                                             .font(.system(size: 32, weight: .bold))
                                             .foregroundStyle(.white.opacity(0.8))
@@ -65,7 +65,7 @@ struct MealSlotView: View {
                                     .foregroundStyle(hasImage(meal) ? .white : .primary)
                                 
                                 HStack(spacing: 4) {
-                                    if meal.isEatingOut {
+                                    if meal.cookingType == .eatingOut {
                                         Image(systemName: "infinity")
                                     } else if let recipe = meal.recipe {
                                         Image(systemName: "clock")

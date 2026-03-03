@@ -29,6 +29,13 @@ struct WeekPlanView: View {
     @State private var selectedPage: Int = 0
     @State private var viewMode: ViewMode = .week
     
+    // Centralized presetnation state
+    @State private var recipeToNavigate: Recipe?
+    @State private var mealForNotes: PlannedMeal?
+    @State private var isShowingRecipePicker = false
+    @State private var selectedMealTypeForPicker: MealType?
+    @State private var selectedDateForPicker: Date?
+    
     var body: some View {
         VStack(spacing: 0) {
             GeometryReader { geometry in
@@ -43,14 +50,44 @@ struct WeekPlanView: View {
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: columnSpacing) {
                                 ForEach(dates(for: pageOffset), id: \.self) { date in
-                                    DayColumn(date: date, plan: plan(for: date))
-                                        .frame(width: columnWidth)
+                                    DayColumn(
+                                        date: date,
+                                        plan: plan(for: date),
+                                        onRecipeTapped: { recipeToNavigate = $0 },
+                                        onNotesTapped: { mealForNotes = $0 },
+                                        onPickerTapped: { type, date in
+                                            selectedMealTypeForPicker = type
+                                            selectedDateForPicker = date
+                                            isShowingRecipePicker = true
+                                        }
+                                    )
+                                    .frame(width: columnWidth)
                                 }
                             }
                             .padding(.horizontal, 8)
                             .frame(minWidth: geometry.size.width)
                         }
                         .tag(pageOffset)
+                        .sheet(item: $recipeToNavigate) { recipe in
+                            RecipeDetailView(recipe: recipe)
+                        }
+                        .sheet(item: $mealForNotes) { meal in
+                            MealNotesSheet(meal: meal)
+                        }
+                        .sheet(isPresented: $isShowingRecipePicker) {
+                            RecipePickerSheet(
+                                onSelectRecipe: { recipe in
+                                    if let type = selectedMealTypeForPicker, let date = selectedDateForPicker {
+                                        assignRecipeToPlan(recipe: recipe, type: type, date: date)
+                                    }
+                                },
+                                onSelectEatingOut: {
+                                    if let type = selectedMealTypeForPicker, let date = selectedDateForPicker {
+                                        assignEatingOutToPlan(type: type, date: date)
+                                    }
+                                }
+                            )
+                        }
                     }
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never)) // Enables horizontal swiping!
@@ -126,22 +163,61 @@ struct WeekPlanView: View {
             selectedPage += steps
         }
     }
+    
+    func assignRecipeToPlan(recipe: Recipe, type: MealType, date: Date) {
+        let currentPlan = plan(for: date)
+        if let existingPlan = currentPlan {
+            if let existingMeal = existingPlan.plannedMeals.first(where: { $0.type == type }) {
+                existingMeal.recipe = recipe
+                existingMeal.title = nil
+                existingMeal.cookingType = .homeCooked
+            } else {
+                let newMeal = PlannedMeal(type: type, recipe: recipe, day: existingPlan)
+                existingPlan.plannedMeals.append(newMeal)
+            }
+        } else {
+            let newPlan = Day(date: date)
+            let newMeal = PlannedMeal(type: type, recipe: recipe, day: newPlan)
+            newPlan.plannedMeals.append(newMeal)
+            modelContext.insert(newPlan)
+        }
+    }
+    
+    func assignEatingOutToPlan(type: MealType, date: Date) {
+        let currentPlan = plan(for: date)
+        if let existingPlan = currentPlan {
+            if let existingMeal = existingPlan.plannedMeals.first(where: { $0.type == type }) {
+                existingMeal.recipe = nil
+                existingMeal.title = "Eating Out"
+                existingMeal.cookingType = .eatingOut
+            } else {
+                let newMeal = PlannedMeal(type: type, recipe: nil, day: existingPlan)
+                newMeal.title = "Eating Out"
+                newMeal.cookingType = .eatingOut
+                existingPlan.plannedMeals.append(newMeal)
+            }
+        } else {
+            let newPlan = Day(date: date)
+            let newMeal = PlannedMeal(type: type, recipe: nil, day: newPlan)
+            newMeal.title = "Eating Out"
+            newMeal.cookingType = .eatingOut
+            newPlan.plannedMeals.append(newMeal)
+            modelContext.insert(newPlan)
+        }
+    }
 }
 
 struct DayColumn: View {
     @Environment(\.modelContext) private var modelContext
     
-    @State private var isShowingRecipePicker = false
-    @State private var selectedMealTypeForPicker: MealType?
-    @State private var selectedDateForPicker: Date?
+    let date: Date
+    let plan: Day?
     
     @State private var expandedSlots: Set<MealType> = []
     
-    @State private var recipeToNavigate: Recipe?
-    @State private var mealForNotes: PlannedMeal?
-    
-    let date: Date
-    let plan: Day?
+    let onRecipeTapped: (Recipe) -> Void
+    let onNotesTapped: (PlannedMeal) -> Void
+    let onPickerTapped: (MealType, Date) -> Void
     
     var body: some View {
         VStack(spacing: 4) {
@@ -155,26 +231,6 @@ struct DayColumn: View {
                     .foregroundStyle(Calendar.current.isDateInToday(date) ? .blue : .primary)
             }
             .padding(.bottom, 8)
-            .sheet(isPresented: $isShowingRecipePicker) {
-                RecipePickerSheet(
-                    onSelectRecipe: { recipe in
-                        if let type = selectedMealTypeForPicker, let date = selectedDateForPicker {
-                            assignRecipeToPlan(recipe: recipe, type: type, date: date)
-                        }
-                    },
-                    onSelectEatingOut: {
-                        if let type = selectedMealTypeForPicker, let date = selectedDateForPicker {
-                            assignEatingOutToPlan(type: type, date: date)
-                        }
-                    }
-                )
-            }
-            .sheet(item: $mealForNotes) { meal in
-                MealNotesSheet(meal: meal)
-            }
-            .sheet(item: $recipeToNavigate) { recipe in
-                RecipeDetailView(recipe: recipe)
-            }
             
             slot(for: .breakfast, isCollapsible: true)
             slot(for: .lunch)
@@ -218,13 +274,13 @@ struct DayColumn: View {
                 expandUp: expandUp,
                 onTap: {
                     if let recipe = plannedMeal?.recipe {
-                        recipeToNavigate = recipe
+                        onRecipeTapped(recipe)
                     } else {
-                        openPicker(for: type)
+                        onPickerTapped(type, date)
                     }
                 },
                 onSwitch: {
-                    openPicker(for: type)
+                    onPickerTapped(type, date)
                 },
                 onDelete: {
                     if let mealToDelete = plannedMeal {
@@ -236,7 +292,7 @@ struct DayColumn: View {
                 },
                 onNotes: {
                     if let mealToNote = plannedMeal {
-                        mealForNotes = mealToNote
+                        onNotesTapped(mealToNote)
                     }
                 },
                 onCloseEmpty: isCollapsible ? {
@@ -247,51 +303,4 @@ struct DayColumn: View {
             )
         }
     }
-    
-    private func openPicker(for type: MealType) {
-        selectedMealTypeForPicker = type
-        selectedDateForPicker = date
-        isShowingRecipePicker = true
-    }
-    
-    func assignRecipeToPlan(recipe: Recipe, type: MealType, date: Date) {
-        if let existingPlan = plan {
-            if let existingMeal = existingPlan.plannedMeals.first(where: { $0.type == type }) {
-                existingMeal.recipe = recipe
-                existingMeal.title = nil
-                existingMeal.isEatingOut = false
-            } else {
-                let newMeal = PlannedMeal(type: type, recipe: recipe, day: existingPlan)
-                existingPlan.plannedMeals.append(newMeal)
-            }
-        } else {
-            let newPlan = Day(date: date)
-            let newMeal = PlannedMeal(type: type, recipe: recipe, day: newPlan)
-            newPlan.plannedMeals.append(newMeal)
-            modelContext.insert(newPlan)
-        }
-    }
-    
-    func assignEatingOutToPlan(type: MealType, date: Date) {
-        if let existingPlan = plan {
-            if let existingMeal = existingPlan.plannedMeals.first(where: { $0.type == type }) {
-                existingMeal.recipe = nil
-                existingMeal.title = "Eating Out"
-                existingMeal.isEatingOut = true
-            } else {
-                let newMeal = PlannedMeal(type: type, recipe: nil, day: existingPlan)
-                newMeal.title = "Eating Out"
-                newMeal.isEatingOut = true
-                existingPlan.plannedMeals.append(newMeal)
-            }
-        } else {
-            let newPlan = Day(date: date)
-            let newMeal = PlannedMeal(type: type, recipe: nil, day: newPlan)
-            newMeal.title = "Eating Out"
-            newMeal.isEatingOut = true
-            newPlan.plannedMeals.append(newMeal)
-            modelContext.insert(newPlan)
-        }
-    }
-    
 }

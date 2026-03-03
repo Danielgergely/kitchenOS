@@ -77,6 +77,8 @@ struct RecipeDetailView: View {
                         }
                     }
                     
+                    RecipeStatsCard(recipe: recipe)
+                    
                     Divider()
                     
                     // Ingredients
