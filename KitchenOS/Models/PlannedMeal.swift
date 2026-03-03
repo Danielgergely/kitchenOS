@@ -7,7 +7,7 @@
 import Foundation
 import SwiftData
 
-enum CookingType: String, Codable {
+enum CookingType: String, Codable, CaseIterable {
     case homeCooked = "Home Cooked Meal"
     case eatingOut = "Eating Out"
     case leftovers = "Leftovers"

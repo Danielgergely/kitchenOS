@@ -27,66 +27,64 @@ struct MealSlotView: View {
             ZStack(alignment: .topTrailing) {
                 
                 // 1. THE MAIN CLICKABLE CARD
-                Button(action: onTap) {
-                    ZStack(alignment: .bottomLeading) {
-                        
-                        // --- BACKGROUND LAYER ---
-                        if let meal {
-                            if let imageData = meal.recipe?.image, let uiImage = UIImage(data: imageData) {
-                                Image(uiImage: uiImage)
-                                    .resizable()
-                                    .scaledToFill()
-                                    .frame(minWidth: 0, maxWidth: .infinity, minHeight: 80, maxHeight: .infinity)
-                                    .clipped()
-                                    .overlay(Color.black.opacity(0.3))
-                            } else {
-                                ZStack {
-                                    RoundedRectangle(cornerRadius: 10)
-                                        .fill(meal.cookingType == .eatingOut ? Color.orange.opacity(0.2) : Color.blue.opacity(0.1))
-                                    if meal.cookingType == .eatingOut {
-                                        Image(systemName: "fork.knife")
-                                            .font(.system(size: 32, weight: .bold))
-                                            .foregroundStyle(.white.opacity(0.8))
-                                    }
+                ZStack(alignment: .bottomLeading) {
+                    // --- BACKGROUND LAYER ---
+                    if let meal {
+                        if let imageData = meal.recipe?.image, let uiImage = UIImage(data: imageData) {
+                            Image(uiImage: uiImage)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(minWidth: 0, maxWidth: .infinity, minHeight: 80, maxHeight: .infinity)
+                                .clipped()
+                                .overlay(Color.black.opacity(0.3))
+                        } else {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 10)
+                                    .fill(meal.cookingType == .eatingOut ? Color.orange.opacity(0.2) : Color.blue.opacity(0.1))
+                                if meal.cookingType == .eatingOut {
+                                    Image(systemName: "fork.knife")
+                                        .font(.system(size: 32, weight: .bold))
+                                        .foregroundStyle(.white.opacity(0.8))
                                 }
                             }
-                        } else {
-                            RoundedRectangle(cornerRadius: 10)
-                                .fill(Color(uiColor: .secondarySystemBackground))
                         }
-                        
-                        // --- TEXT LAYER ---
-                        if let meal {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(meal.displayTitle)
-                                    .font(.caption)
-                                    .fontWeight(.bold)
-                                    .lineLimit(2)
-                                    .foregroundStyle(hasImage(meal) ? .white : .primary)
-                                
-                                HStack(spacing: 4) {
-                                    if meal.cookingType == .eatingOut {
-                                        Image(systemName: "infinity")
-                                    } else if let recipe = meal.recipe {
-                                        Image(systemName: "clock")
-                                        Text("\(recipe.prepTime.totalMinutes)m")
-                                    }
-                                }
-                                .font(.system(size: 9, weight: .medium))
-                                .foregroundStyle(hasImage(meal) ? .white.opacity(0.9) : .secondary)
-                            }
-                            .padding(8)
-                        } else {
-                            Image(systemName: "plus")
-                                .font(.headline)
-                                .foregroundStyle(.tertiary)
-                                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-                        }
+                    } else {
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(Color(uiColor: .secondarySystemBackground))
                     }
-                    .frame(minHeight: 80, maxHeight: .infinity)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    
+                    // --- TEXT LAYER ---
+                    if let meal {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(meal.displayTitle)
+                                .font(.caption)
+                                .fontWeight(.bold)
+                                .lineLimit(2)
+                                .foregroundStyle(hasImage(meal) ? .white : .primary)
+                            
+                            HStack(spacing: 4) {
+                                if meal.cookingType == .eatingOut {
+                                    Image(systemName: "infinity")
+                                } else if let recipe = meal.recipe {
+                                    Image(systemName: "clock")
+                                    Text("\(recipe.prepTime.totalMinutes)m")
+                                }
+                            }
+                            .font(.system(size: 9, weight: .medium))
+                            .foregroundStyle(hasImage(meal) ? .white.opacity(0.9) : .secondary)
+                        }
+                        .padding(8)
+                    } else {
+                        Image(systemName: "plus")
+                            .font(.headline)
+                            .foregroundStyle(.tertiary)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                    }
                 }
-                .buttonStyle(.plain)
+                .frame(minHeight: 80, maxHeight: .infinity)
+                .contentShape(Rectangle())
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .onTapGesture { onTap() }
                 
                 // 2. THE DELETE BUTTON (Only shows if a meal exists)
                 if meal != nil {

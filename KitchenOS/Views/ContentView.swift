@@ -70,7 +70,7 @@ struct ContentView: View {
                 if let selectedItem {
                     switch selectedItem {
                     case .dashboard:
-                        ContentUnavailableView("Dashboard", systemImage: "house", description: Text("Coming soon"))
+                        DashboardView()
                     case .calendar:
                         WeekPlanView()
                             .navigationTitle("Week Plan")
