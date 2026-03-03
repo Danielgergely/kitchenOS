@@ -68,26 +68,6 @@ struct WeekPlanView: View {
                             .frame(minWidth: geometry.size.width)
                         }
                         .tag(pageOffset)
-                        .sheet(item: $recipeToNavigate) { recipe in
-                            RecipeDetailView(recipe: recipe)
-                        }
-                        .sheet(item: $mealForNotes) { meal in
-                            MealNotesSheet(meal: meal)
-                        }
-                        .sheet(isPresented: $isShowingRecipePicker) {
-                            RecipePickerSheet(
-                                onSelectRecipe: { recipe in
-                                    if let type = selectedMealTypeForPicker, let date = selectedDateForPicker {
-                                        assignRecipeToPlan(recipe: recipe, type: type, date: date)
-                                    }
-                                },
-                                onSelectEatingOut: {
-                                    if let type = selectedMealTypeForPicker, let date = selectedDateForPicker {
-                                        assignEatingOutToPlan(type: type, date: date)
-                                    }
-                                }
-                            )
-                        }
                     }
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never)) // Enables horizontal swiping!
@@ -97,6 +77,26 @@ struct WeekPlanView: View {
         }
         .navigationBarTitleDisplayMode(.inline)
         .navigationTitle(headerDate.formatted("MMMM yyyy"))
+        .sheet(item: $recipeToNavigate) { recipe in
+            RecipeDetailView(recipe: recipe)
+        }
+        .sheet(item: $mealForNotes) { meal in
+            MealNotesSheet(meal: meal)
+        }
+        .sheet(isPresented: $isShowingRecipePicker) {
+            RecipePickerSheet(
+                onSelectRecipe: { recipe in
+                    if let type = selectedMealTypeForPicker, let date = selectedDateForPicker {
+                        assignRecipeToPlan(recipe: recipe, type: type, date: date)
+                    }
+                },
+                onSelectEatingOut: {
+                    if let type = selectedMealTypeForPicker, let date = selectedDateForPicker {
+                        assignEatingOutToPlan(type: type, date: date)
+                    }
+                }
+            )
+        }
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 Picker("View", selection: $viewMode) {
