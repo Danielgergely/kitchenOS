@@ -43,7 +43,7 @@ struct EditIngredientsRow: View {
             .clipShape(RoundedRectangle(cornerRadius: 8))
             .fixedSize(horizontal: true, vertical: false)
             
-            // 4. Action Button
+            // Remove button
             Button(action: onDelete) {
                 Image(systemName: "minus.circle.fill")
                     .foregroundStyle(.red.opacity(0.8))

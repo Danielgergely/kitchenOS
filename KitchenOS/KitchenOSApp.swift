@@ -16,6 +16,7 @@ struct KitchenOSApp: App {
             RecipeBook.self,
             Recipe.self,
             PlannedMeal.self,
+            ShoppingItem.self,
             Tag.self,
             Day.self
             ])

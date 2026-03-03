@@ -16,9 +16,11 @@ struct SettingsView: View {
     @State private var exportFileURL: URL?
     @State private var showingFileImporter = false
     
+    @AppStorage("remindersListName") private var remindersListName: String = "KitchenOS"
+    
     var body: some View {
         NavigationStack {
-            List {
+            Form {
                 Section(header: Text("Data Management"), footer: Text("Export your entire recipe library as a JSON file to share with others, or import an existing backup.")) {
                     
                     // --- EXPORT BUTTON ---. I dont
@@ -42,6 +44,18 @@ struct SettingsView: View {
                         showingFileImporter = true
                     } label: {
                         Label("Import Recipes", systemImage: "square.and.arrow.down")
+                    }
+                    
+                    Section(header: Text("Integrations")) {
+                        HStack {
+                            Image(systemName: "list.bullet.rectangle.portrait")
+                                .foregroundStyle(.blue)
+                            Text("Reminders List")
+                            Spacer()
+                            TextField("List Name", text: $remindersListName)
+                                .multilineTextAlignment(.trailing)
+                                .foregroundStyle(.secondary)
+                        }
                     }
                 }
             }

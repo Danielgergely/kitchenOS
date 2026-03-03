@@ -8,10 +8,14 @@ import SwiftUI
 import SwiftData
 
 struct RecipeDetailView: View {
+    @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    
     let recipe: Recipe
     
     @State private var isShowingEditSheet = false
+    @State private var isIngredientsExpanded: Bool = true
+    @State private var animatingIngredientId: UUID? = nil
     
     var body: some View {
         ScrollView {
@@ -76,45 +80,81 @@ struct RecipeDetailView: View {
                     Divider()
                     
                     // Ingredients
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Ingredients")
-                            .font(.title2)
-                            .fontWeight(.semibold)
-                        
-                        if (recipe.ingredients.isEmpty) {
-                            Text("No ingredients listed")
-                                .foregroundStyle(.secondary)
-                                .italic()
-                        } else {
-                            ForEach(recipe.ingredients) { ingredient in
-                                HStack {
-                                    Image(systemName: "circle")
-                                        .foregroundStyle(.tertiary)
-                                    Text(ingredient.name)
-                                    Spacer()
-                                    Text("\(ingredient.amount, format: .number) \(ingredient.unit.rawValue)")
-                                    
+                    VStack(alignment: .leading, spacing: 16) {
+                        DisclosureGroup(isExpanded: $isIngredientsExpanded) {
+                            VStack(spacing: 20) {
+                                // "Add All" functionality
+                                Button {
+                                    addAllToCart()
+                                } label: {
+                                    Label("Add All to Shopping List", systemImage: "cart.badge.plus")
+                                        .font(.subheadline.bold())
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 12)
+                                        .background(Color.blue.opacity(0.1))
+                                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                                }
+                                .buttonStyle(.plain)
+                                .padding(.top, 8)
+
+                                // The Grid we built earlier
+                                LazyVGrid(columns: [GridItem(.adaptive(minimum: 250), spacing: 16)], spacing: 12) {
+                                    ForEach(recipe.ingredients) { ingredient in
+                                        ingredientCard(for: ingredient)
+                                    }
                                 }
                             }
+                        } label: {
+                            HStack {
+                                Text("Ingredients")
+                                    .font(.title2.bold())
+                                    .foregroundStyle(.primary)
+                                
+                                Spacer()
+                                
+                                Text("\(recipe.ingredients.count) items")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            }
                         }
-                        
                     }
+                    .padding()
+                    .background(Color(uiColor: .secondarySystemBackground).opacity(0.3))
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
                     
                     Divider()
                     
                     // Instructions
-                    VStack(alignment: .leading, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 20) {
                         Text("Instructions")
-                            .font(.title2)
-                            .fontWeight(.semibold)
+                            .font(.title2.bold())
                         
-                        if (recipe.instructions.isEmpty) {
-                            Text("No instructions provided.")
-                                .foregroundStyle(.secondary)
-                                .italic()
+                        if recipe.instructions.isEmpty {
+                            ContentUnavailableView("No Instructions", systemImage: "text.badge.plus", description: Text("Tap Edit to add step-by-step instructions."))
                         } else {
-                            Text(recipe.instructions)
-                                .lineSpacing(6)
+                            let steps = recipe.instructions.components(separatedBy: .newlines)
+                                .filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+                            
+                            ForEach(Array(steps.enumerated()), id: \.offset) { index, step in
+                                HStack(alignment: .top, spacing: 16) {
+                                    // Step Number Circle
+                                    Text("\(index + 1)")
+                                        .font(.subheadline.bold())
+                                        .foregroundStyle(.white)
+                                        .frame(width: 28, height: 28)
+                                        .background(Color.blue, in: Circle())
+                                    
+                                    // Step Content
+                                    Text(step)
+                                        .font(.body)
+                                        .lineSpacing(6)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                                .padding()
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(Color(uiColor: .secondarySystemBackground).opacity(0.3))
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                            }
                         }
                     }
                 }
@@ -133,6 +173,69 @@ struct RecipeDetailView: View {
             RecipeEditorSheet(recipeToEdit: recipe) {
                 dismiss()
             }
+        }
+    }
+    
+    @ViewBuilder
+    private func ingredientCard(for ingredient: Ingredient) -> some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(ingredient.name)
+                    .font(.system(.subheadline, design: .rounded, weight: .bold))
+                    .lineLimit(1)
+                Text("\(ingredient.amount, format: .number) \(ingredient.unit.rawValue)")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            
+            Spacer()
+            
+            Button {
+                addToCart(ingredient)
+            } label: {
+                Image(systemName: "cart.badge.plus")
+                    .font(.title3)
+                    .foregroundStyle(.blue)
+                    .padding(10)
+                    .background(.blue.opacity(0.1))
+                    .clipShape(Circle())
+            }
+            .buttonStyle(.plain)
+        }
+        .padding()
+        .background(Color(uiColor: .systemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
+    private func addAllToCart() {
+        withAnimation(.spring()) {
+            for ingredient in recipe.ingredients {
+                let newItem = ShoppingItem(
+                    name: ingredient.name,
+                    amount: ingredient.amount,
+                    unit: ingredient.unit
+                )
+                modelContext.insert(newItem)
+            }
+            HapticManager.impact(style: .light)
+        }
+    }
+    
+    private func addToCart(_ ingredient: Ingredient) {
+        let newItem = ShoppingItem(
+            name: ingredient.name,
+            amount: ingredient.amount,
+            unit: ingredient.unit
+        )
+        modelContext.insert(newItem)
+        
+        withAnimation(.spring()) {
+            animatingIngredientId = ingredient.id
+        }
+        
+        // Clear the animation state
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            animatingIngredientId = nil
         }
     }
 }
