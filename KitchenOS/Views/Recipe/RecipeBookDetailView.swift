@@ -14,6 +14,7 @@ struct RecipeBookDetailView: View {
     @Bindable var book: RecipeBook
     
     @State private var isShowingEditSheet = false
+    @State private var isShowingAddRecipeSheet = false
     
     let gridColumns = [GridItem(.adaptive(minimum: 160, maximum: 200), spacing: 16)]
     
@@ -35,22 +36,28 @@ struct RecipeBookDetailView: View {
                 }
                 
                 // --- RECIPE GRID ---
-                if let recipes = book.recipes, !recipes.isEmpty {
-                    LazyVGrid(columns: gridColumns, spacing: 16) {
-                        ForEach(recipes) { recipe in
-                            NavigationLink(value: recipe) {
-                                RecipeSquare(recipe: recipe) {
-                                    withAnimation(.spring()) {
-                                        recipe.book = nil
+                LazyVGrid(columns: gridColumns, spacing: 16) {
+                        AddPlaceholderSquare(title: "New Recipe", icon: "plus") {
+                            isShowingAddRecipeSheet = true
+                        }
+                        .frame(height: 160)
+                        
+                        if let recipes = book.recipes {
+                            ForEach(recipes) { recipe in
+                                NavigationLink(value: recipe) {
+                                    RecipeSquare(recipe: recipe) {
+                                        withAnimation(.spring()) {
+                                            recipe.book = nil
+                                        }
                                     }
-                                }
                                     .frame(height: 160)
+                                }
+                                .buttonStyle(.plain)
                             }
-                            .buttonStyle(.plain)
                         }
                     }
                     .padding(.horizontal)
-                } else {
+                if book.recipes?.isEmpty ?? true {
                     // Empty State
                     VStack(spacing: 16) {
                         Image(systemName: "text.book.closed")
@@ -83,6 +90,9 @@ struct RecipeBookDetailView: View {
             RecipeBookEditorSheet(bookToEdit: book) {
                 dismiss()
             }
+        }
+        .sheet(isPresented: $isShowingAddRecipeSheet) {
+            RecipeEditorSheet(initialBook: book)
         }
     }
 }

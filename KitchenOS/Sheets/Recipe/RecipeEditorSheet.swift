@@ -14,6 +14,7 @@ struct RecipeEditorSheet: View {
     @Environment(\.dismiss) private var dismiss
     
     var recipeToEdit: Recipe?
+    var initialBook: RecipeBook?
     
     @State private var title = ""
     @State private var summary = ""
@@ -330,6 +331,8 @@ struct RecipeEditorSheet: View {
                             tags: []
                         )
                     }
+                } else if let book = initialBook {
+                    selectedBook = book
                 }
             }
             .onChange(of: selectedImageData) { oldValue, newValue in
