@@ -37,8 +37,12 @@ struct RecipeEditorSheet: View {
     @State private var aiScanPhotoItem: PhotosPickerItem?
     @State private var isScanning = false
     
+    // AI stuff
     @State private var showingImageSourceDialog = false
     @State private var showingImagePicker = false
+    
+    @State private var showURLSelector = false
+    @State private var urlString = ""
     
     @State private var imageSourceType: UIImagePickerController.SourceType = .photoLibrary
     
@@ -259,6 +263,9 @@ struct RecipeEditorSheet: View {
                 Button("Take Photo") {
                     showCamera = true
                 }
+                Button("From URL") {
+                    showURLSelector = true
+                }
                 PhotosPicker("Choose from Library", selection: $aiScanPhotoItem, matching: .images)
                 Button("Cancel", role: .cancel) {}
             }
@@ -277,6 +284,26 @@ struct RecipeEditorSheet: View {
                     }
                 }
                 Button("Cancel", role: .cancel) { }
+            }
+            .alert("Import from Web", isPresented: $showURLSelector) {
+                TextField("https://...", text: $urlString)
+                    .keyboardType(.URL)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                
+                Button("Cancel", role: .cancel) {
+                    urlString = ""
+                }
+                
+                Button("Extract") {
+                    // Validate URL and trigger extraction
+                    if let url = URL(string: urlString) {
+                        extractFromURLWithAI(url: url)
+                    }
+                    urlString = ""
+                }
+            } message: {
+                Text("Paste the link to the recipe.")
             }
             .alert("Delete recipe?", isPresented: $showingDeleteConfirmation) {
                 Button("Delete", role: .destructive) {
@@ -386,46 +413,19 @@ struct RecipeEditorSheet: View {
         
         Task {
             do {
-                let extracted = try await AIService.shared.extractRecipe(from: image, availableTags: tagNames)
+                let extracted = try await AIService.shared.extractRecipeFromImage(from: image, availableTags: tagNames)
                 
                 // Push the data back to the Main Thread so the UI updates
                 await MainActor.run {
-                    self.title = extracted.title ?? "Scanned Recipe"
-                    self.summary = extracted.summary ?? ""
-                    self.instructions = extracted.instructions ?? ""
-                    self.prepTime = extracted.prepTime ?? 0
-                    self.cookTime = extracted.cookTime ?? 0
-                    
-                    // Extracted food type
-                    if let typeString = extracted.type, let parsedType = FoodType(rawValue: typeString) {
-                        self.selectedType = parsedType
-                    }
-                    
-                    // Extracted tags
-                    if let extractedTags = extracted.tags {
-                        let matchedTags = allTags.filter { extractedTags.contains($0.name) }
-                        self.tempTags = matchedTags
-                    }
-                    
-                    // Extracted Ingredients
-                    if let aiIngredients = extracted.ingredients {
-                        self.tempIngredients = aiIngredients.compactMap { extIng in
-                            let name = extIng.name ?? "Unknown Ingredient"
-                            let amount = extIng.amount ?? 1.0
-                            let unitString = extIng.unit ?? "piece"
-                            
-                            let matchedUnit = Unit(rawValue: unitString.lowercased()) ?? .piece
-                            
-                            return Ingredient(
-                                id: UUID(),
-                                name: name,
-                                amount: amount,
-                                unit: matchedUnit,
-                                category: .food,
-                                tags: []
-                            )
-                        }
-                    }
+                    let newRecipe = RecipeMapper().extractedRecipeToRecipe(extracted)
+                    self.title = newRecipe.title
+                    self.summary = newRecipe.summary
+                    self.instructions = newRecipe.instructions
+                    self.prepTime = newRecipe.prepTime.prepTime
+                    self.cookTime = newRecipe.prepTime.cookingTime
+                    self.selectedType = newRecipe.type
+                    self.tempTags = newRecipe.tags
+                    self.tempIngredients = newRecipe.ingredients
                     
                     self.isScanning = false
                 }
@@ -433,6 +433,39 @@ struct RecipeEditorSheet: View {
             } catch {
                 print("AI Extraction Failed: \(error.localizedDescription)")
                 await MainActor.run { isScanning = false }
+            }
+        }
+    }
+    func extractFromURLWithAI(url: URL) {
+        isScanning = true
+        let tagNames = allTags.map { $0.name }
+        Task {
+            do {
+                let extracted = try await AIService.shared.extractRecipeFromURL(from: url, availableTags: tagNames)
+                
+                var downloadedImageData: Data? = nil
+                if let urlString = extracted.imageUrl, let imageUrl = URL(string: urlString) {
+                    downloadedImageData = await WebService.downloadImage(from: imageUrl)
+                }
+                                
+                await MainActor.run {
+                    let newRecipe = RecipeMapper().extractedRecipeToRecipe(extracted)
+                    self.title = newRecipe.title
+                    self.summary = newRecipe.summary
+                    self.instructions = newRecipe.instructions
+                    self.prepTime = newRecipe.prepTime.prepTime
+                    self.cookTime = newRecipe.prepTime.cookingTime
+                    self.selectedType = newRecipe.type
+                    self.tempTags = newRecipe.tags
+                    self.tempIngredients = newRecipe.ingredients
+                    self.selectedImageData = downloadedImageData
+                    
+                    self.isScanning = false
+                }
+                
+            } catch {
+                print("AI Extraction Failed: \(error.localizedDescription)")
+                await MainActor.run { self.isScanning = false }
             }
         }
     }
