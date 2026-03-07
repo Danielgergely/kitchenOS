@@ -42,6 +42,8 @@ struct RecipeEditorSheet: View {
     
     @State private var imageSourceType: UIImagePickerController.SourceType = .photoLibrary
     
+    @Query(sort: \Tag.name) private var allTags: [Tag]
+    
     // delete stuff
     @State private var showingDeleteConfirmation = false
     var onDelete: (() -> Void)? = nil
@@ -380,9 +382,11 @@ struct RecipeEditorSheet: View {
     func processImageWithAI(_ image: UIImage) {
         isScanning = true
         
+        let tagNames = allTags.map { $0.name }
+        
         Task {
             do {
-                let extracted = try await AIService.shared.extractRecipe(from: image)
+                let extracted = try await AIService.shared.extractRecipe(from: image, availableTags: tagNames)
                 
                 // Push the data back to the Main Thread so the UI updates
                 await MainActor.run {
@@ -392,6 +396,18 @@ struct RecipeEditorSheet: View {
                     self.prepTime = extracted.prepTime ?? 0
                     self.cookTime = extracted.cookTime ?? 0
                     
+                    // Extracted food type
+                    if let typeString = extracted.type, let parsedType = FoodType(rawValue: typeString) {
+                        self.selectedType = parsedType
+                    }
+                    
+                    // Extracted tags
+                    if let extractedTags = extracted.tags {
+                        let matchedTags = allTags.filter { extractedTags.contains($0.name) }
+                        self.tempTags = matchedTags
+                    }
+                    
+                    // Extracted Ingredients
                     if let aiIngredients = extracted.ingredients {
                         self.tempIngredients = aiIngredients.compactMap { extIng in
                             let name = extIng.name ?? "Unknown Ingredient"

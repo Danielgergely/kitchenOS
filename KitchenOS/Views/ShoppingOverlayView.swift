@@ -58,7 +58,7 @@ struct ShoppingOverlayView: View {
             }
         }
         .matchedGeometryEffect(id: "cart", in: animation)
-        .opacity(0.6)
+        .opacity(items.isEmpty ? 0.1 : 0.6)
     }
     
     // Expanded List

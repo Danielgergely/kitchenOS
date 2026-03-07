@@ -17,14 +17,37 @@ struct RecipeBookDetailView: View {
     @State private var isShowingAddRecipeSheet = false
     
     @State private var searchText = ""
+    @State private var selectedTags: [Tag] = []
+    @State private var selectedFoodTypes: [FoodType] = []
         
     var filteredRecipes: [Recipe] {
         guard let recipes = book.recipes else { return [] }
-        if searchText.isEmpty { return recipes }
-        return recipes.filter { recipe in
-            recipe.title.localizedCaseInsensitiveContains(searchText) ||
-            recipe.summary.localizedCaseInsensitiveContains(searchText)
+        var result = recipes
+        
+        // 1. Text Search
+        if !searchText.isEmpty {
+            result = result.filter { recipe in
+                recipe.summary.localizedCaseInsensitiveContains(searchText) ||
+                recipe.title.localizedCaseInsensitiveContains(searchText)
+            }
         }
+        
+        // 2. Food Type Filter
+        if !selectedFoodTypes.isEmpty {
+            result = result.filter { selectedFoodTypes.contains($0.type) }
+        }
+        
+        // 3. Tag Filter
+        if !selectedTags.isEmpty {
+            result = result.filter { recipe in
+                let recipeTagIds = recipe.tags.map { $0.id }
+                return selectedTags.allSatisfy { selectedTag in
+                    recipeTagIds.contains(selectedTag.id)
+                }
+            }
+        }
+        
+        return result
     }
     
     let gridColumns = [GridItem(.adaptive(minimum: 160, maximum: 200), spacing: 16)]
@@ -50,7 +73,12 @@ struct RecipeBookDetailView: View {
                 if !(book.recipes?.isEmpty ?? true) || !searchText.isEmpty {
                     HStack {
                         Spacer()
-                        ExpandableSearchBar(text: $searchText, placeholder: "Search cookbook...")
+                        ExpandableSearchBar(
+                            text: $searchText,
+                            placeholder: "Search cookbook...",
+                            selectedTags: $selectedTags,
+                            selectedFoodTypes: $selectedFoodTypes
+                        )
                     }
                     .padding(.horizontal)
                 }

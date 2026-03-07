@@ -24,18 +24,43 @@ struct RecipeLibraryView: View {
     
     let gridColumns = [GridItem(.adaptive(minimum: 160, maximum: 200), spacing: 16)]
     
+    // Filtering & Search
     var filteredBooks: [RecipeBook] {
         if bookSearchText.isEmpty { return books }
         return books.filter { $0.title.localizedCaseInsensitiveContains(bookSearchText) }
     }
     
     var filteredRecipes: [Recipe] {
-        if recipeSearchText.isEmpty { return allRecipes }
-        return allRecipes.filter { recipe in
-            recipe.summary.localizedCaseInsensitiveContains(recipeSearchText) ||
-            recipe.title.localizedCaseInsensitiveContains(recipeSearchText)
+        var result = allRecipes
+        
+        // 1. Text Search
+        if !recipeSearchText.isEmpty {
+            result = result.filter { recipe in
+                recipe.summary.localizedCaseInsensitiveContains(recipeSearchText) ||
+                recipe.title.localizedCaseInsensitiveContains(recipeSearchText)
+            }
         }
+        
+        // 2. Food Type Filter
+        if !selectedFoodTypes.isEmpty {
+            result = result.filter { selectedFoodTypes.contains($0.type) }
+        }
+        
+        // 3. Tag Filter
+        if !selectedTags.isEmpty {
+            result = result.filter { recipe in
+                let recipeTagIds = recipe.tags.map { $0.id }
+                return selectedTags.allSatisfy { selectedTag in
+                    recipeTagIds.contains(selectedTag.id)
+                }
+            }
+        }
+        
+        return result
     }
+    
+    @State private var selectedTags: [Tag] = []
+    @State private var selectedFoodTypes: [FoodType] = []
     
     var body: some View {
         NavigationStack {
@@ -136,7 +161,12 @@ struct RecipeLibraryView: View {
                             
                             Spacer()
                             
-                            ExpandableSearchBar(text: $recipeSearchText, placeholder: "Search recipes...")
+                            ExpandableSearchBar(
+                                text: $recipeSearchText,
+                                placeholder: "Search recipes...",
+                                selectedTags: $selectedTags,
+                                selectedFoodTypes: $selectedFoodTypes
+                            )
                         }
                         .padding(.horizontal)
                         

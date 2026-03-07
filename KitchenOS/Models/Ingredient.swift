@@ -27,6 +27,10 @@ enum Unit: String, Codable, CaseIterable {
     case tsp = "tsp"
     case tbsp = "tbsp"
     
+    // US
+    case cup = "cup"
+    case lbs = "lbs"
+    case oz = "oz"
     
 }
 

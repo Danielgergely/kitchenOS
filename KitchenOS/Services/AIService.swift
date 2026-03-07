@@ -8,6 +8,8 @@ struct ExtractedRecipe: Codable {
     let instructions: String?
     let prepTime: Int?
     let cookTime: Int?
+    let type: String?
+    let tags: [String]?
     let ingredients: [ExtractedIngredient]?
 }
 
@@ -30,9 +32,13 @@ class AIService {
     ]
     
     // Notice this function is `async throws` and RETURNS the ExtractedRecipe
-    func extractRecipe(from image: UIImage) async throws -> ExtractedRecipe {
+    func extractRecipe(from image: UIImage, availableTags: [String] = []) async throws -> ExtractedRecipe {
         let config = GenerationConfig(responseMIMEType: "application/json")
         let apiKey = Secrets.googleApiKey
+        
+        let unitList = Unit.allCases.map { $0.rawValue }.joined(separator: ", ")
+        let foodTypeList = FoodType.allCases.map { $0.rawValue }.joined(separator: ", ")
+        let tagList = availableTags.isEmpty ? "None available" : availableTags.joined(separator: ", ")
         
         let prompt = """
         Extract the recipe from this image. 
@@ -42,7 +48,9 @@ class AIService {
         - instructions (String, formatted step-by-step with line breaks)
         - prepTime (Int, minutes only)
         - cookTime (Int, minutes only)
-        - ingredients (Array of objects with 'name' (String), 'amount' (Double), 'unit' (String, use exact words like piece, g, ml, cup, tbsp, tsp, pinch))
+        - type (String, choose exactly one from this list: \(foodTypeList))
+        - tags (Array of Strings, select relevant tags ONLY from this list: \(tagList))
+        - ingredients (Array of objects with 'name' (String), 'amount' (Double), 'unit' (String, choose exactly one from this list: \(unitList)))
         """
         
         var lastError: Error?
