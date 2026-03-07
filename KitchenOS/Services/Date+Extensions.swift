@@ -9,14 +9,16 @@ import Foundation
 extension Date {
     
     var startOfWeek: Date  {
-        let calendar = Calendar.current
+        var calendar = Calendar.current
+        calendar.firstWeekday = 1
         let components = calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: self)
         guard let start = calendar.date(from: components) else { return self }
         return calendar.date(byAdding: .day, value: 1, to: start) ?? self
     }
     
     var weekDays: [Date] {
-        let calendar = Calendar.current
+        var calendar = Calendar.current
+        calendar.firstWeekday = 1
         let start = self.startOfWeek
         return (0..<7).compactMap { day -> Date? in
             calendar.date(byAdding: .day, value: day, to: start)

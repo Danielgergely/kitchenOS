@@ -14,6 +14,13 @@ struct RecipePickerSheet: View {
     var onSelectRecipe: (Recipe) -> Void
     var onSelectEatingOut: () -> Void
     
+    @State private var searchText = ""
+        
+    var filteredRecipes: [Recipe] {
+        if searchText.isEmpty { return recipes }
+        return recipes.filter { $0.title.localizedCaseInsensitiveContains(searchText) }
+    }
+    
     var body: some View {
         NavigationStack {
             List {
@@ -31,7 +38,7 @@ struct RecipePickerSheet: View {
                             .foregroundStyle(.secondary)
                     }
                     
-                    ForEach(recipes) { recipe in
+                    ForEach(filteredRecipes) { recipe in
                         Button {
                             onSelectRecipe(recipe)
                             dismiss()
@@ -61,6 +68,7 @@ struct RecipePickerSheet: View {
                     }
                 }
             }
+            .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search recipes...")
             .navigationTitle("Select Meal")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

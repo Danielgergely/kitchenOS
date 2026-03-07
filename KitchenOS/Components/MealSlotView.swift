@@ -17,6 +17,7 @@ struct MealSlotView: View {
     var onNotes: () -> Void
     var onCloseEmpty: (() -> Void)? = nil
     
+    @State private var showingRatingPopover = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -61,6 +62,18 @@ struct MealSlotView: View {
                                 .fontWeight(.bold)
                                 .lineLimit(2)
                                 .foregroundStyle(hasImage(meal) ? .white : .primary)
+                            
+                            // Rating
+                            if let rating = meal.ratingGiven {
+                                HStack(spacing: 2) {
+                                    ForEach(0..<rating, id: \.self) { _ in
+                                        Image(systemName: "star.fill")
+                                            .font(.caption2)
+                                            .foregroundStyle(.yellow)
+                                    }
+                                }
+                                .padding(.bottom, 2)
+                            }
                             
                             HStack(spacing: 4) {
                                 if meal.cookingType == .eatingOut {
@@ -107,6 +120,29 @@ struct MealSlotView: View {
                     }
                     .padding(6)
                 }
+            }
+        }
+        .contextMenu {
+            // Context Menu for Rating the specific meal
+            if let meal = meal, meal.recipe != nil || meal.cookingType == .eatingOut {
+                Button {
+                    showingRatingPopover = true
+                } label: {
+                    Label("Rate Meal...", systemImage: "star")
+                }
+                
+                if meal.ratingGiven != nil {
+                    Button(role: .destructive) {
+                        meal.ratingGiven = nil
+                    } label: {
+                        Label("Clear Rating", systemImage: "slash.circle")
+                    }
+                }
+            }
+        }
+        .popover(isPresented: $showingRatingPopover) {
+            if let meal = meal {
+                RatingPopover(meal: meal)
             }
         }
     }

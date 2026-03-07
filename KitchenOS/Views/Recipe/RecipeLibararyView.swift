@@ -53,6 +53,9 @@ struct RecipeLibraryView: View {
                                     Text("My Cookbooks")
                                         .font(.title2.bold())
                                         .foregroundStyle(.primary)
+                                    Text("(\(filteredBooks.count))")
+                                        .font(.title3.weight(.semibold))
+                                        .foregroundStyle(.secondary)
                                     
                                     Image(systemName: "chevron.down")
                                         .font(.system(size: 14, weight: .bold))
@@ -118,6 +121,10 @@ struct RecipeLibraryView: View {
                                     Text("All Recipes")
                                         .font(.title2.bold())
                                         .foregroundStyle(.primary)
+                                    Text("(\(filteredRecipes.count))")
+                                        .font(.title3.weight(.semibold))
+                                        .foregroundStyle(.secondary)
+                                        
                                     
                                     Image(systemName: "chevron.down")
                                         .font(.system(size: 14, weight: .bold))

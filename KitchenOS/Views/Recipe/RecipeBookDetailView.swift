@@ -16,6 +16,17 @@ struct RecipeBookDetailView: View {
     @State private var isShowingEditSheet = false
     @State private var isShowingAddRecipeSheet = false
     
+    @State private var searchText = ""
+        
+    var filteredRecipes: [Recipe] {
+        guard let recipes = book.recipes else { return [] }
+        if searchText.isEmpty { return recipes }
+        return recipes.filter { recipe in
+            recipe.title.localizedCaseInsensitiveContains(searchText) ||
+            recipe.summary.localizedCaseInsensitiveContains(searchText)
+        }
+    }
+    
     let gridColumns = [GridItem(.adaptive(minimum: 160, maximum: 200), spacing: 16)]
     
     var body: some View {
@@ -35,6 +46,15 @@ struct RecipeBookDetailView: View {
                         }
                 }
                 
+                // --- SEARCH BAR ---
+                if !(book.recipes?.isEmpty ?? true) || !searchText.isEmpty {
+                    HStack {
+                        Spacer()
+                        ExpandableSearchBar(text: $searchText, placeholder: "Search cookbook...")
+                    }
+                    .padding(.horizontal)
+                }
+                
                 // --- RECIPE GRID ---
                 LazyVGrid(columns: gridColumns, spacing: 16) {
                         AddPlaceholderSquare(title: "New Recipe", icon: "plus") {
@@ -42,18 +62,16 @@ struct RecipeBookDetailView: View {
                         }
                         .frame(height: 160)
                         
-                        if let recipes = book.recipes {
-                            ForEach(recipes) { recipe in
-                                NavigationLink(value: recipe) {
-                                    RecipeSquare(recipe: recipe) {
-                                        withAnimation(.spring()) {
-                                            recipe.book = nil
-                                        }
+                        ForEach(filteredRecipes) { recipe in
+                            NavigationLink(value: recipe) {
+                                RecipeSquare(recipe: recipe) {
+                                    withAnimation(.spring()) {
+                                        recipe.book = nil
                                     }
-                                    .frame(height: 160)
                                 }
-                                .buttonStyle(.plain)
+                                .frame(height: 160)
                             }
+                            .buttonStyle(.plain)
                         }
                     }
                     .padding(.horizontal)
@@ -77,6 +95,7 @@ struct RecipeBookDetailView: View {
             }
         }
         .navigationTitle(book.title)
+        .navigationSubtitle((book.recipes?.count.description ?? "0") + " Recipes")
         .navigationBarTitleDisplayMode(.large)
         .edgesIgnoringSafeArea(book.image != nil ? .top : [])
         .toolbar {
@@ -94,5 +113,6 @@ struct RecipeBookDetailView: View {
         .sheet(isPresented: $isShowingAddRecipeSheet) {
             RecipeEditorSheet(initialBook: book)
         }
+        .scrollDismissesKeyboard(.interactively)
     }
 }

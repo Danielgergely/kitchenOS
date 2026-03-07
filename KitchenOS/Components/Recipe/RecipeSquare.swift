@@ -12,6 +12,7 @@ struct RecipeSquare: View {
     var onRemove: (() -> Void)? = nil
     
     @State private var showingRemoveConfirmation = false
+    @State private var showingPlanner = false
     
     var body: some View {
         ZStack(alignment: .bottomLeading) {
@@ -40,6 +41,19 @@ struct RecipeSquare: View {
                     .fontWeight(.bold)
                     .foregroundStyle(.white)
                     .lineLimit(2)
+                
+                // Rating
+                if let rating = recipe.averageRating {
+                    let stars = Int(rating.rounded())
+                    HStack(spacing: 2) {
+                        ForEach(0..<stars, id: \.self) { _ in
+                            Image(systemName: "star.fill")
+                                .font(.caption2)
+                                .foregroundStyle(.yellow)
+                        }
+                    }
+                    .padding(.bottom, 2)
+                }
                 
                 HStack  {
                     Label("\(recipe.prepTime.totalMinutes) min", systemImage: "clock")
@@ -85,6 +99,16 @@ struct RecipeSquare: View {
                 .strokeBorder(Color.primary.opacity(0.15), lineWidth: 1)
         )
         .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+        .contextMenu {
+            Button {
+                showingPlanner = true
+            } label: {
+                Label("Plan Meal...", systemImage: "calendar.badge.plus")
+            }
+        }
+        .sheet(isPresented: $showingPlanner) {
+            MealPlannerSheet(recipe: recipe)
+        }
         .confirmationDialog("Remove recipe from Cookbook?", isPresented: $showingRemoveConfirmation, titleVisibility: .visible) {
             Button("Remove", role: .destructive) {
                 onRemove?()
