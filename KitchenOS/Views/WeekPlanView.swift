@@ -70,7 +70,7 @@ struct WeekPlanView: View {
                         .tag(pageOffset)
                     }
                 }
-                .tabViewStyle(.page(indexDisplayMode: .never)) // Enables horizontal swiping!
+                .tabViewStyle(.page(indexDisplayMode: .never))
                 .padding(.top, 4)
                 .background(Color(uiColor: .systemGroupedBackground))
             }
@@ -90,9 +90,9 @@ struct WeekPlanView: View {
                         assignRecipeToPlan(recipe: recipe, type: type, date: date)
                     }
                 },
-                onSelectEatingOut: {
+                onSelectCustomMeal: { title, cookingType in
                     if let type = selectedMealTypeForPicker, let date = selectedDateForPicker {
-                        assignEatingOutToPlan(type: type, date: date)
+                        assignCustomMealToPlan(title: title, type: type, cookingType: cookingType, date: date)
                     }
                 }
             )
@@ -183,24 +183,24 @@ struct WeekPlanView: View {
         }
     }
     
-    func assignEatingOutToPlan(type: MealType, date: Date) {
+    func assignCustomMealToPlan(title: String, type: MealType, cookingType: CookingType, date: Date) {
         let currentPlan = plan(for: date)
         if let existingPlan = currentPlan {
             if let existingMeal = existingPlan.plannedMeals.first(where: { $0.type == type }) {
                 existingMeal.recipe = nil
-                existingMeal.title = "Eating Out"
-                existingMeal.cookingType = .eatingOut
+                existingMeal.title = title.isEmpty ? cookingType.rawValue : title
+                existingMeal.cookingType = cookingType
             } else {
                 let newMeal = PlannedMeal(type: type, recipe: nil, day: existingPlan)
-                newMeal.title = "Eating Out"
-                newMeal.cookingType = .eatingOut
+                newMeal.title = title.isEmpty ? cookingType.rawValue : title
+                newMeal.cookingType = cookingType
                 existingPlan.plannedMeals.append(newMeal)
             }
         } else {
             let newPlan = Day(date: date)
             let newMeal = PlannedMeal(type: type, recipe: nil, day: newPlan)
-            newMeal.title = "Eating Out"
-            newMeal.cookingType = .eatingOut
+            newMeal.title = title.isEmpty ? cookingType.rawValue : title
+            newMeal.cookingType = cookingType
             newPlan.plannedMeals.append(newMeal)
             modelContext.insert(newPlan)
         }

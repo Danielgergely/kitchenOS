@@ -12,8 +12,10 @@ struct RecipePickerSheet: View {
     @Query(sort: \Recipe.title) private var recipes: [Recipe]
     
     var onSelectRecipe: (Recipe) -> Void
-    var onSelectEatingOut: () -> Void
+    var onSelectCustomMeal: (String, CookingType) -> Void
     
+    @State private var selectedCookingType: CookingType = .homeCooked
+    @State private var customMealTitle: String = ""
     @State private var searchText = ""
         
     var filteredRecipes: [Recipe] {
@@ -25,46 +27,54 @@ struct RecipePickerSheet: View {
         NavigationStack {
             List {
                 Section {
-                    Button("Eating Out") {
-                        onSelectEatingOut()
-                        dismiss()
-                    }
-                    .foregroundStyle(.orange)
+                    CookingTypeSelector(selection: $selectedCookingType)
+                        .padding(.vertical, 4)
+                } header: {
+                    Text("Meal Type")
                 }
                 
-                Section("My Recipes") {
-                    if recipes.isEmpty {
-                        Text("No recipes yet. Add some first!")
-                            .foregroundStyle(.secondary)
-                    }
-                    
-                    ForEach(filteredRecipes) { recipe in
-                        Button {
-                            onSelectRecipe(recipe)
-                            dismiss()
-                        } label: {
-                            HStack {
-                                if let data = recipe.image, let uiImage = UIImage(data: data) {
-                                    Image(uiImage: uiImage)
-                                        .resizable()
-                                        .scaledToFit()
-                                        .frame(width: 40, height: 40)
-                                        .clipShape(RoundedRectangle(cornerRadius: 6))
-                                } else {
-                                    RoundedRectangle(cornerRadius: 6)
-                                        .fill(Color.secondary.opacity(0.2))
-                                        .frame(width: 40, height: 40)
-                                        .overlay {
-                                            Image(systemName: "fork.knife").font(.caption).foregroundStyle(.secondary)
+                if selectedCookingType == .homeCooked {
+                    Section {
+                        if filteredRecipes.isEmpty {
+                            Text("No recipes found")
+                        } else {
+                            ForEach(filteredRecipes) { recipe in
+                                Button {
+                                    onSelectRecipe(recipe)
+                                    dismiss()
+                                } label: {
+                                    HStack {
+                                        if let data = recipe.image, let uiImage = UIImage(data: data) {
+                                            Image(uiImage: uiImage)
+                                                .resizable()
+                                                .scaledToFill()
+                                                .frame(width: 40, height: 40)
+                                                .clipShape(RoundedRectangle(cornerRadius: 6))
+                                        } else {
+                                            RoundedRectangle(cornerRadius: 6)
+                                                .fill(Color.secondary.opacity(0.2))
+                                                .frame(width: 40, height: 40)
+                                                .overlay {
+                                                    Image(systemName: "fork.knife").font(.caption).foregroundStyle(.secondary)
+                                                }
                                         }
-                                }
-                                
-                                VStack(alignment: .leading) {
-                                    Text(recipe.title).foregroundStyle(.primary)
-                                    Text(recipe.type.rawValue).font(.caption).foregroundStyle(.secondary)
+                                        
+                                        VStack(alignment: .leading) {
+                                            Text(recipe.title).foregroundStyle(.primary)
+                                            Text(recipe.type.rawValue).font(.caption).foregroundStyle(.secondary)
+                                        }
+                                    }
                                 }
                             }
                         }
+                    } header: {
+                        Text("Select Recipe")
+                    }
+                } else {
+                    Section {
+                        TextField("What are you having?", text: $customMealTitle)
+                    } header: {
+                        Text("Meal Details")
                     }
                 }
             }
@@ -74,6 +84,15 @@ struct RecipePickerSheet: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
+                }
+                if selectedCookingType != .homeCooked {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Save") {
+                            onSelectCustomMeal(customMealTitle, selectedCookingType)
+                            dismiss()
+                        }
+                        .disabled(customMealTitle.isEmpty)
+                    }
                 }
             }
         }

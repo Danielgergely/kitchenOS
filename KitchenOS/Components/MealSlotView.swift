@@ -40,10 +40,11 @@ struct MealSlotView: View {
                                 .overlay(Color.black.opacity(0.3))
                         } else {
                             ZStack {
+                                let safeCookingType = meal.cookingType ?? .homeCooked
                                 RoundedRectangle(cornerRadius: 10)
-                                    .fill(meal.cookingType == .eatingOut ? Color.orange.opacity(0.2) : Color.blue.opacity(0.1))
-                                if meal.cookingType == .eatingOut {
-                                    Image(systemName: "fork.knife")
+                                    .fill(safeCookingType == .homeCooked ? Color.blue.opacity(0.1) : safeCookingType.color.opacity(0.2))
+                                if safeCookingType != .homeCooked {
+                                    Image(systemName: safeCookingType.icon)
                                         .font(.system(size: 32, weight: .bold))
                                         .foregroundStyle(.white.opacity(0.8))
                                 }

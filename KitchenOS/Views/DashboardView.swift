@@ -22,27 +22,65 @@ struct DashboardView: View {
     
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
-                    headerSection
-                    
-                    LazyVGrid(columns: columns, spacing: 20) {
-                        todayCard
-                        shoppingCard
-                        topRecipeCard
-                        habitsChartCard
+            GeometryReader { geo in
+                let leftPannelWidth = min(max(geo.size.width * 0.35, 300.0), 300.0)
+                // padding (48) + header height (~50) + row spacing (20)
+                let availableHeight = geo.size.height - 120.0
+                let contentHeight = max(availableHeight, 550.0)
+                
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 20) {
+                        headerSection
+                        
+                        // Main Dashboard Layout
+                        HStack(alignment: .top, spacing: 20) {
+                            
+                            // --- LEFT PANEL: DAILY PLAN ---
+                            todayPanel
+                                .frame(width: leftPannelWidth)
+                            
+                            // --- RIGHT PANEL: WIDGET GRID ---
+                            Grid(horizontalSpacing: 16, verticalSpacing: 16) {
+                                
+                                // Row 1: Two Small Widgets
+                                GridRow {
+                                    TotalRecipesWidget(recipeCount: allRecipes.count)
+                                    ShoppingListWidget(items: pendingShoppingItems)
+                                }
+                                
+                                // Row 2: Large Widget (Highest Rated)
+                                GridRow {
+                                    HighestRatedWidget(recipes: allRecipes)
+                                        .gridCellColumns(2)
+                                }
+                                
+                                // Row 3: Large Widget (Most Cooked)
+                                GridRow {
+                                    MostCookedWidget(recipes: allRecipes)
+                                        .gridCellColumns(2)
+                                }
+                                
+                                // Row 4: Large Widget (Habits Chart)
+                                GridRow {
+                                    CookingHabitsWidget(meals: allMeals)
+                                        .gridCellColumns(2)
+                                }
+                            }
+                            .frame(maxHeight: .infinity)
+                        }
+                        .frame(maxHeight: contentHeight)
                     }
+                    .padding(24)
                 }
-                .padding(24)
+                .background(Color(uiColor: .systemGroupedBackground))
+                .navigationTitle("Dashboard")
+                .navigationBarHidden(true)
             }
-            .background(Color(uiColor: .systemGroupedBackground))
-            .navigationTitle("Dashboard")
-            .navigationBarHidden(true) // We use our custom header instead
         }
     }
     
-    // MARK: - Header
     private var headerSection: some View {
+    HStack {
         VStack(alignment: .leading, spacing: 4) {
             Text(Date().formatted(.dateTime.weekday(.wide).month().day()))
                 .font(.subheadline.weight(.semibold))
@@ -52,8 +90,10 @@ struct DashboardView: View {
             Text("Good \(greeting), Chef")
                 .font(.largeTitle.weight(.bold))
         }
-        .padding(.bottom, 8)
+        Spacer()
     }
+    .padding(.bottom, 8)
+}
     
     private var greeting: String {
         let hour = Calendar.current.component(.hour, from: Date())
@@ -64,132 +104,52 @@ struct DashboardView: View {
         }
     }
     
-    // MARK: - Cards
-    
-    private var todayCard: some View {
+    private var todayPanel: some View {
         DashboardCard(color: .blue) {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 20) {
                 Label("Today's Plan", systemImage: "calendar.day.timeline.left")
-                    .font(.headline)
+                    .font(.title3.bold())
                     .foregroundStyle(.blue)
                 
                 let todaysMeals = allMeals.filter { Calendar.current.isDateInToday($0.day?.date ?? Date.distantPast) }
                 
                 if todaysMeals.isEmpty {
-                    Text("Nothing planned for today.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                    VStack(spacing: 12) {
+                        Image(systemName: "plate")
+                            .font(.system(size: 48))
+                            .foregroundStyle(.tertiary)
+                        Text("Nothing planned for today.")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .padding(.vertical, 40)
                 } else {
-                    VStack(alignment: .leading, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 16) {
                         ForEach(todaysMeals.sorted(by: { $0.type.rawValue > $1.type.rawValue })) { meal in
-                            HStack {
+                            VStack(alignment: .leading, spacing: 8) {
                                 Text(meal.type.rawValue.capitalized)
                                     .font(.caption.bold())
                                     .foregroundStyle(.secondary)
-                                    .frame(width: 70, alignment: .leading)
+                                    .textCase(.uppercase)
+                                
+                                // Show Image if it's a recipe
+                                if let data = meal.recipe?.image, let uiImage = UIImage(data: data) {
+                                    Image(uiImage: uiImage)
+                                        .resizable()
+                                        .scaledToFill()
+                                        .frame(maxHeight: 120)
+                                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                                }
                                 
                                 Text(meal.displayTitle)
-                                    .font(.subheadline.weight(.medium))
+                                    .font(.headline)
                             }
+                            .padding(.bottom, 8)
                         }
                     }
                 }
-            }
-        }
-    }
-    
-    private var shoppingCard: some View {
-        DashboardCard(color: .orange) {
-            VStack(alignment: .leading, spacing: 16) {
-                Label("Shopping List", systemImage: "cart")
-                    .font(.headline)
-                    .foregroundStyle(.orange)
-                
-                HStack(alignment: .firstTextBaseline) {
-                    Text("\(pendingShoppingItems.count)")
-                        .font(.system(size: 48, weight: .bold, design: .rounded))
-                    Text("items to buy")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-                
-                if !pendingShoppingItems.isEmpty {
-                    Text("Don't forget: \(pendingShoppingItems.prefix(2).map { $0.name }.joined(separator: ", "))\(pendingShoppingItems.count > 2 ? "..." : "")")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-            }
-        }
-    }
-    
-    private var topRecipeCard: some View {
-        DashboardCard(color: .pink) {
-            VStack(alignment: .leading, spacing: 16) {
-                Label("Most Cooked", systemImage: "flame.fill")
-                    .font(.headline)
-                    .foregroundStyle(.pink)
-                
-                if let topRecipe = allRecipes.max(by: { $0.timesCooked < $1.timesCooked }), topRecipe.timesCooked > 0 {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(topRecipe.title)
-                            .font(.title3.weight(.bold))
-                            .lineLimit(1)
-                        
-                        Text("Cooked \(topRecipe.timesCooked) times")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                        
-                        if let rating = topRecipe.averageRating {
-                            HStack(spacing: 2) {
-                                ForEach(0..<Int(rating.rounded()), id: \.self) { _ in
-                                    Image(systemName: "star.fill").foregroundStyle(.yellow).font(.caption)
-                                }
-                            }
-                            .padding(.top, 4)
-                        }
-                    }
-                } else {
-                    Text("Cook more meals to see your favorites here!")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-            }
-        }
-    }
-    
-    private var habitsChartCard: some View {
-        DashboardCard(color: .green) {
-            VStack(alignment: .leading, spacing: 16) {
-                Label("Cooking Habits", systemImage: "chart.pie.fill")
-                    .font(.headline)
-                    .foregroundStyle(.green)
-                
-                let completedMeals = allMeals.filter { $0.isCompleted }
-                if completedMeals.isEmpty {
-                    Text("No data yet.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                } else {
-                    // Simple chart showing home cooked vs eating out vs leftovers
-                    Chart {
-                        ForEach(CookingType.allCases, id: \.self) { type in
-                            let count = completedMeals.filter { $0.cookingType == type }.count
-                            if count > 0 {
-                                SectorMark(
-                                    angle: .value("Count", count),
-                                    innerRadius: .ratio(0.6),
-                                    angularInset: 2.0
-                                )
-                                .cornerRadius(4)
-                                .foregroundStyle(by: .value("Type", type.rawValue))
-                            }
-                        }
-                    }
-                    .chartLegend(position: .trailing)
-                    .frame(height: 120)
-                }
+                Spacer()
             }
         }
     }
