@@ -8,23 +8,27 @@ import SwiftUI
 
 struct TotalRecipesWidget: View {
     let recipeCount: Int
+    let size: WidgetSize
     
     var body: some View {
-        DashboardCard(color: .indigo) {
-            VStack(alignment: .leading, spacing: 8) {
+        BaseWidgetLayout(
+            size: size,
+            color: .indigo,
+            icon: "book.pages.fill",
+            title: "Total Recipes",
+            subtitle: "In your library"
+        ) {
+            // Main Content
+            ZStack {
+                Circle().fill(Color.indigo.opacity(0.1))
                 Image(systemName: "book.pages.fill")
-                    .font(.title2)
+                    .font(.title)
                     .foregroundStyle(.indigo)
-                
-                Spacer()
-                
-                Text("\(recipeCount)")
-                    .font(.system(size: 36, weight: .bold, design: .rounded))
-                
-                Text("Total Recipes")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
             }
+        } extraStats: {
+            // Extra Stats
+            Text("\(recipeCount)")
+                .font(.system(size: size == .large ? 48 : 36, weight: .bold, design: .rounded))
         }
     }
 }

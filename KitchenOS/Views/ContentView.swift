@@ -30,10 +30,11 @@ struct ContentView: View {
     
     @State private var selectedItem: NavigationItem? = .calendar
     @State private var showSettings: Bool = false
+    @State private var columnVisibility: NavigationSplitViewVisibility = .automatic
     
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
-            NavigationSplitView {
+            NavigationSplitView(columnVisibility: $columnVisibility) {
                 List(NavigationItem.allCases, selection: $selectedItem) { item in
                     NavigationLink(value: item) {
                         Label {
@@ -70,7 +71,7 @@ struct ContentView: View {
                 if let selectedItem {
                     switch selectedItem {
                     case .dashboard:
-                        DashboardView()
+                        DashboardView(isSidebarOpen: columnVisibility != .detailOnly)
                     case .calendar:
                         WeekPlanView()
                             .navigationTitle("Week Plan")

@@ -8,40 +8,47 @@ import SwiftUI
 
 struct ShoppingListWidget: View {
     let items: [ShoppingItem]
+    let size: WidgetSize
     
     var body: some View {
-        DashboardCard(color: .orange) {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Label("Shopping", systemImage: "cart")
-                        .font(.subheadline.bold())
-                        .foregroundStyle(.orange)
-                    Spacer()
+        BaseWidgetLayout(
+            size: size,
+            color: .orange,
+            icon: "cart",
+            title: "Shopping",
+            subtitle: items.isEmpty ? "All caught up!" : "\(items.count) items"
+        ) {
+            // Main Content
+            ZStack(alignment: .topTrailing) {
+                Circle().fill(Color.orange.opacity(0.1))
+                Image(systemName: "cart")
+                    .font(.title)
+                    .foregroundStyle(.orange)
+                
+                // Show the red badge if we have items
+                if !items.isEmpty {
                     Text("\(items.count)")
-                        .font(.caption.bold())
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Color.orange.opacity(0.2))
-                        .foregroundStyle(.orange)
-                        .clipShape(Capsule())
+                        .font(.caption2.bold())
+                        .foregroundStyle(.white)
+                        .padding(6)
+                        .background(Color.red)
+                        .clipShape(Circle())
+                        .offset(x: 4, y: -4)
                 }
-                
-                Spacer()
-                
-                if items.isEmpty {
-                    Text("All caught up!")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                } else {
-                    VStack(alignment: .leading, spacing: 4) {
-                        ForEach(items.prefix(2)) { item in
-                            Label(item.name, systemImage: "circle")
-                                .lineLimit(1)
-                        }
+            }
+        } extraStats: {
+            // Extra Stats
+            if !items.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    // Show more items if it's a large widget, fewer if small
+                    let displayCount = size == .small ? 2 : 4
+                    ForEach(items.prefix(displayCount)) { item in
+                        Label(item.name, systemImage: "circle")
+                            .lineLimit(1)
                     }
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
                 }
+                .font(size == .large ? .subheadline : .caption)
+                .foregroundStyle(.secondary)
             }
         }
     }

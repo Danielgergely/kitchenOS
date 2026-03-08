@@ -9,41 +9,40 @@ import Charts
 
 struct CookingHabitsWidget: View {
     let meals: [PlannedMeal]
+    let size: WidgetSize
     
     var body: some View {
-        DashboardCard(color: .green) {
-            VStack(alignment: .leading, spacing: 16) {
-                Label("Cooking Habits", systemImage: "chart.pie.fill")
-                    .font(.headline)
-                    .foregroundStyle(.green)
-                
-                let completedMeals = meals.filter { $0.isCompleted }
-                
-                if completedMeals.isEmpty {
-                    Text("No data yet. Complete some meals to see your habits!")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .frame(maxHeight: .infinity)
-                } else {
-                    Chart {
-                        ForEach(CookingType.allCases, id: \.self) { type in
-                            let count = completedMeals.filter { $0.cookingType == type }.count
-                            if count > 0 {
-                                SectorMark(
-                                    angle: .value("Count", count),
-                                    innerRadius: .ratio(0.6),
-                                    angularInset: 2.0
-                                )
-                                .cornerRadius(4)
-                                .foregroundStyle(by: .value("Type", type.rawValue))
-                            }
+        let completedMeals = meals.filter { $0.isCompleted }
+        
+        BaseWidgetLayout(
+            size: size,
+            color: .green,
+            icon: "chart.pie.fill",
+            title: "Cooking Habits",
+            subtitle: completedMeals.isEmpty ? "Complete some meals!" : "Based on history"
+        ) {
+            // Main Content
+            if !completedMeals.isEmpty {
+                Chart {
+                    ForEach(CookingType.allCases, id: \.self) { type in
+                        let count = completedMeals.filter { $0.cookingType == type }.count
+                        if count > 0 {
+                            SectorMark(
+                                angle: .value("Count", count),
+                                innerRadius: .ratio(0.6),
+                                angularInset: 2.0
+                            )
+                            .cornerRadius(4)
+                            .foregroundStyle(by: .value("Type", type.rawValue))
                         }
                     }
-                    .chartLegend(position: .trailing)
-                    .frame(maxWidth: 250, maxHeight: .infinity)
                 }
+                .chartLegend(size == .large ? .visible : .hidden)
+            } else {
+                Circle().stroke(Color.green.opacity(0.2), lineWidth: 4)
             }
-            .frame(maxHeight: .infinity)
+        } extraStats: {
+            EmptyView()
         }
     }
 }
