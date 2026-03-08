@@ -148,8 +148,16 @@ struct WeekPlanView: View {
     
     func dates(for page: Int) -> [Date] {
         if viewMode == .week {
-            let weekDate = Calendar.current.date(byAdding: .weekOfYear, value: page, to: baseDate) ?? baseDate
-            return weekDate.weekDays
+            // 1. Shift the baseDate by the requested number of weeks
+            let shiftedDate = Calendar.current.date(byAdding: .weekOfYear, value: page, to: baseDate) ?? baseDate
+            
+            // 2. Find the start of the week for that shifted date
+            let startOfWeek = Calendar.current.dateInterval(of: .weekOfYear, for: shiftedDate)?.start ?? shiftedDate
+            
+            // 3. Generate the 7 days starting from that date
+            return (0..<7).compactMap { dayOffset in
+                Calendar.current.date(byAdding: .day, value: dayOffset, to: startOfWeek)
+            }
         } else {
             let pageBaseDate = Calendar.current.date(byAdding: .day, value: page * viewMode.rawValue, to: baseDate) ?? baseDate
             return (0..<viewMode.rawValue).compactMap { dayOffset in
