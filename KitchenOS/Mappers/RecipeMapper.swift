@@ -7,11 +7,20 @@
 import SwiftData
 import SwiftUI
 
+struct DraftRecipe {
+    let title: String
+    let summary: String
+    let instructions: String
+    let image: Image?
+    let type: FoodType
+    let prepTime: PreparationTime
+    let ingredients: [Ingredient]
+    let tags: [Tag]
+}
 
-class RecipeMapper {
-    @Query(sort: \Tag.name) private var allTags: [Tag]
+struct RecipeMapper {
 
-    func extractedRecipeToRecipe(_ extracted: ExtractedRecipe) -> Recipe {
+    static func extractedRecipeToRecipe(_ extracted: ExtractedRecipe, availableTags allTags: [Tag]) -> DraftRecipe {
         
         var type: FoodType = .mainDish
         var tags: [Tag] = []
@@ -24,8 +33,8 @@ class RecipeMapper {
         
         // Extracted tags
         if let extractedTags = extracted.tags {
-            let matchedTags = allTags.filter { extractedTags.contains($0.name) }
-            tags = matchedTags
+            let lowercasedExtracted = extractedTags.map { $0.lowercased() }
+            tags = allTags.filter { lowercasedExtracted.contains($0.name.lowercased()) }
         }
         
         // Extracted Ingredients
@@ -50,7 +59,7 @@ class RecipeMapper {
         
         let prepTime = PreparationTime(prepTime: extracted.prepTime ?? 0, cookingTime: extracted.cookTime ?? 0)
         
-        return Recipe(
+        return DraftRecipe(
             title: extracted.title ?? "Scanned Recipe",
             summary: extracted.summary ?? "",
             instructions: extracted.instructions ?? "",
@@ -60,9 +69,5 @@ class RecipeMapper {
             ingredients: ingredients,
             tags: tags
         )
-        
-        
-        
-
     }
 }

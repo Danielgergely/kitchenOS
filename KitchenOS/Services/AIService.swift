@@ -70,11 +70,6 @@ class AIService {
         
         let prompt = getRecipeExtractionAIPrompt(extractFromText: "this image", tagList: tagList)
         
-        // Convert the image to JPEG data and wrap as a Part for multimodal input
-        guard let imageData = image.jpegData(compressionQuality: 0.9) else {
-            throw NSError(domain: "AI Service", code: -4, userInfo: [NSLocalizedDescriptionKey: "Failed to encode image data."])
-        }
-        
         return try await callLLM(prompt: prompt, content: image)
     }
     

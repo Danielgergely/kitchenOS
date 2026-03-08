@@ -417,7 +417,7 @@ struct RecipeEditorSheet: View {
                 
                 // Push the data back to the Main Thread so the UI updates
                 await MainActor.run {
-                    let newRecipe = RecipeMapper().extractedRecipeToRecipe(extracted)
+                    let newRecipe = RecipeMapper.extractedRecipeToRecipe(extracted, availableTags: allTags)
                     self.title = newRecipe.title
                     self.summary = newRecipe.summary
                     self.instructions = newRecipe.instructions
@@ -449,7 +449,7 @@ struct RecipeEditorSheet: View {
                 }
                                 
                 await MainActor.run {
-                    let newRecipe = RecipeMapper().extractedRecipeToRecipe(extracted)
+                    let newRecipe = RecipeMapper.extractedRecipeToRecipe(extracted, availableTags: allTags)
                     self.title = newRecipe.title
                     self.summary = newRecipe.summary
                     self.instructions = newRecipe.instructions
