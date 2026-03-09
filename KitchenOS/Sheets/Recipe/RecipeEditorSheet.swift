@@ -148,6 +148,10 @@ struct RecipeEditorSheet: View {
                             Button {
                                 showingTagSelector = true
                             } label: {
+                                ForEach(tempTags) { tag in
+                                    TagPill(tag: tag)
+                                }
+                                Spacer()
                                 HStack {
                                     Image(systemName: "plus.circle.fill")
                                     Text("Add Tag")
@@ -160,10 +164,6 @@ struct RecipeEditorSheet: View {
                                 .clipShape(Capsule())
                             }
                             .buttonStyle(.borderless)
-                            
-                            ForEach(tempTags) { tag in
-                                TagPill(tag: tag)
-                            }
                         }
                         .padding(.vertical, 4)
                     }
