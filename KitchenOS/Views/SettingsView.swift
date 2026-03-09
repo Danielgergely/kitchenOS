@@ -15,17 +15,39 @@ struct SettingsView: View {
     
     @State private var exportFileURL: URL?
     @State private var showingFileImporter = false
+    @State private var showingPreferencesSheet = false // Controls our new profile sheet
     
     @AppStorage("remindersListName") private var remindersListName: String = "KitchenOS"
     
     var body: some View {
         NavigationStack {
             Form {
+                // --- PERSONALIZATION SECTION ---
+                Section(header: Text("Personalization"), footer: Text("Teach KitchenOS about your tastes to get better AI meal suggestions.")) {
+                    Button {
+                        showingPreferencesSheet = true
+                    } label: {
+                        Label("Taste Profile & Preferences", systemImage: "person.crop.circle.badge.questionmark")
+                            .foregroundStyle(.primary)
+                    }
+                }
+                
+                // --- INTEGRATIONS SECTION ---
+                Section(header: Text("Integrations")) {
+                    HStack {
+                        Image(systemName: "list.bullet.rectangle.portrait")
+                            .foregroundStyle(.blue)
+                        Text("Reminders List")
+                        Spacer()
+                        TextField("List Name", text: $remindersListName)
+                            .multilineTextAlignment(.trailing)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                
+                // --- DATA MANAGEMENT SECTION ---
                 Section(header: Text("Data Management"), footer: Text("Export your entire recipe library as a JSON file to share with others, or import an existing backup.")) {
                     
-                    // --- EXPORT BUTTON ---. I dont
-                    // 1. We generate the file URL.
-                    // 2. We pass it to the native Apple ShareLink.
                     if let fileURL = exportFileURL {
                         ShareLink(item: fileURL) {
                             Label("Export Recipes (\(allRecipes.count))", systemImage: "square.and.arrow.up")
@@ -39,32 +61,17 @@ struct SettingsView: View {
                         }
                     }
                     
-                    // --- IMPORT BUTTON ---
                     Button {
                         showingFileImporter = true
                     } label: {
                         Label("Import Recipes", systemImage: "square.and.arrow.down")
                     }
-                    
-                    Section(header: Text("Integrations")) {
-                        HStack {
-                            Image(systemName: "list.bullet.rectangle.portrait")
-                                .foregroundStyle(.blue)
-                            Text("Reminders List")
-                            Spacer()
-                            TextField("List Name", text: $remindersListName)
-                                .multilineTextAlignment(.trailing)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
                 }
             }
             .navigationTitle("Settings")
             .onAppear {
-                // Pre-generate the export file as soon as the view loads
                 exportFileURL = DataExchangeService.generateExportFile(from: allRecipes, books: allBooks)
             }
-            // The native Apple file picker
             .fileImporter(
                 isPresented: $showingFileImporter,
                 allowedContentTypes: [.json],
@@ -78,6 +85,9 @@ struct SettingsView: View {
                 case .failure(let error):
                     print("Error selecting file: \(error.localizedDescription)")
                 }
+            }
+            .sheet(isPresented: $showingPreferencesSheet) {
+                UserPreferencesSheet()
             }
         }
     }

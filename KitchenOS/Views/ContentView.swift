@@ -27,6 +27,7 @@ enum NavigationItem: String, CaseIterable, Identifiable {
 }
 
 struct ContentView: View {
+    @Environment(\.modelContext) private var modelContext
     
     @State private var selectedItem: NavigationItem? = .calendar
     @State private var showSettings: Bool = false
@@ -91,6 +92,11 @@ struct ContentView: View {
                     .allowsHitTesting(true)
             }
             
+        }
+        .task {
+            // Give the app a moment to render before doing heavy lifting
+            try? await Task.sleep(for: .seconds(2))
+            ProfilingEngine.updateLearnedPreferences(context: modelContext)
         }
     }
 }

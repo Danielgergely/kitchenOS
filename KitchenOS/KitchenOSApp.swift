@@ -18,7 +18,8 @@ struct KitchenOSApp: App {
             PlannedMeal.self,
             ShoppingItem.self,
             Tag.self,
-            Day.self
+            Day.self,
+            UserPreferences.self
             ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
