@@ -91,6 +91,25 @@ class DataExchangeService {
             
             let backup = try JSONDecoder().decode(TransferBackup.self, from: data)
             
+            let tagDescriptor = FetchDescriptor<Tag>()
+            let existingTags = (try? context.fetch(tagDescriptor)) ?? []
+            var tagCache: [String: Tag] = existingTags.reduce(into: [:]) { $0[$1.name] = $1 }
+            
+            let resolveTag: (TransferTag) -> Tag = { tTag in
+                if let existing = tagCache[tTag.name] {
+                    return existing
+                }
+                let newTag = Tag(
+                    id: UUID(),
+                    name: tTag.name,
+                    icon: tTag.icon,
+                    color: TagColor(rawValue: tTag.colorRawValue) ?? .blue
+                )
+                context.insert(newTag)
+                tagCache[tTag.name] = newTag
+                return newTag
+            }
+            
             var restoredBooks: [UUID: RecipeBook] = [:]
             
             for tBook in backup.books {
@@ -103,15 +122,7 @@ class DataExchangeService {
             for transfer in backup.recipes {
                 
                 let ingredients = transfer.ingredients.map { tIng in
-                    // Reconstruct the ingredient's tags
-                    let ingTags = tIng.tags.map { tTag in
-                        Tag(
-                            id: UUID(),
-                            name: tTag.name,
-                            icon: tTag.icon,
-                            color: TagColor(rawValue: tTag.colorRawValue) ?? .blue
-                        )
-                    }
+                    let ingTags = tIng.tags.map { resolveTag($0) }
                     
                     return Ingredient(
                         id: UUID(),
@@ -127,14 +138,7 @@ class DataExchangeService {
                     )
                 }
                 
-                let tags = transfer.tags.map { tTag in
-                    Tag(
-                        id: UUID(),
-                        name: tTag.name,
-                        icon: tTag.icon,
-                        color: TagColor(rawValue: tTag.colorRawValue) ?? .blue
-                    )
-                }
+                let tags = transfer.tags.map { resolveTag($0) }
                 
                 let newRecipe = Recipe(
                     title: transfer.title,
