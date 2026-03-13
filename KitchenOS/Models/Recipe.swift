@@ -47,7 +47,7 @@ final class Recipe {
     var lastCookedDate: Date? {
         let completedMeals = plannedMeals.filter { $0.isCompleted }
         // Sorts the meals by date, newest first, and grabs the top one
-        return completedMeals.compactMap { $0.day?.date }.max()
+        return completedMeals.compactMap { $0.day.date }.max()
     }
     
     init(title: String, summary: String = "", instructions: String = "", image: Data? = nil, type: FoodType = .mainDish, prepTime: PreparationTime = PreparationTime(), ingredients: [Ingredient] = [], tags: [Tag] = []) {

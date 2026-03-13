@@ -16,8 +16,13 @@ struct MealPlannerSheet: View {
     
     let recipe: Recipe
     
-    @State private var selectedDate = Date()
+    @State private var selectedDate: Date
     @State private var selectedMealType: MealType = .dinner
+    
+    init(recipe: Recipe, initialDate: Date? = nil) {
+        self.recipe = recipe
+        _selectedDate = State(initialValue: initialDate ?? Date())
+    }
     
     var body: some View {
         NavigationStack {
@@ -96,7 +101,7 @@ struct MealPlannerSheet: View {
             existingMeal.title = nil
             existingMeal.cookingType = .homeCooked
         } else {
-            let newMeal = PlannedMeal(type: selectedMealType, recipe: recipe, day: day)
+            let newMeal = PlannedMeal(type: selectedMealType, day: day, recipe: recipe)
             day.plannedMeals.append(newMeal)
         }
         

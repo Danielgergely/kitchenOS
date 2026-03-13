@@ -16,7 +16,7 @@ final class PlannedMeal {
     
     @Relationship(deleteRule: .nullify) var recipe: Recipe?
     
-    var day: Day?
+    var day: Day
     
     var cookingType: CookingType? = CookingType.homeCooked
     
@@ -31,11 +31,10 @@ final class PlannedMeal {
     }
     
     var isCompleted: Bool {
-        guard let mealDate = day?.date else { return false }
-        return mealDate < Date()
+        return day.date < Date()
     }
     
-    init(type: MealType, guestCount: Int? = nil, title: String? = nil, notes: String = "", recipe: Recipe? = nil, day: Day? = nil, cookingType: CookingType = .homeCooked) {
+    init(type: MealType, day: Day, guestCount: Int? = nil, title: String? = nil, notes: String = "", recipe: Recipe? = nil, cookingType: CookingType = .homeCooked) {
         self.title = title
         self.type = type
         self.guestCount = guestCount

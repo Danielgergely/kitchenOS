@@ -180,12 +180,12 @@ struct WeekPlanView: View {
                 existingMeal.title = nil
                 existingMeal.cookingType = .homeCooked
             } else {
-                let newMeal = PlannedMeal(type: type, recipe: recipe, day: existingPlan)
+                let newMeal = PlannedMeal(type: type, day: existingPlan, recipe: recipe)
                 existingPlan.plannedMeals.append(newMeal)
             }
         } else {
             let newPlan = Day(date: date)
-            let newMeal = PlannedMeal(type: type, recipe: recipe, day: newPlan)
+            let newMeal = PlannedMeal(type: type, day: newPlan, recipe: recipe)
             newPlan.plannedMeals.append(newMeal)
             modelContext.insert(newPlan)
         }
@@ -199,14 +199,14 @@ struct WeekPlanView: View {
                 existingMeal.title = title.isEmpty ? cookingType.rawValue : title
                 existingMeal.cookingType = cookingType
             } else {
-                let newMeal = PlannedMeal(type: type, recipe: nil, day: existingPlan)
+                let newMeal = PlannedMeal(type: type, day: existingPlan, recipe: nil)
                 newMeal.title = title.isEmpty ? cookingType.rawValue : title
                 newMeal.cookingType = cookingType
                 existingPlan.plannedMeals.append(newMeal)
             }
         } else {
             let newPlan = Day(date: date)
-            let newMeal = PlannedMeal(type: type, recipe: nil, day: newPlan)
+            let newMeal = PlannedMeal(type: type, day: newPlan, recipe: nil)
             newMeal.title = title.isEmpty ? cookingType.rawValue : title
             newMeal.cookingType = cookingType
             newPlan.plannedMeals.append(newMeal)

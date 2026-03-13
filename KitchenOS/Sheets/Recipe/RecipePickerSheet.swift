@@ -11,12 +11,16 @@ struct RecipePickerSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Query(sort: \Recipe.title) private var recipes: [Recipe]
     
+    var prefilledDate: Date? = nil
+    var prefilledMealType: MealType? = nil
+    
     var onSelectRecipe: (Recipe) -> Void
     var onSelectCustomMeal: (String, CookingType) -> Void
     
     @State private var selectedCookingType: CookingType = .homeCooked
     @State private var customMealTitle: String = ""
     @State private var searchText = ""
+    @State private var showingRecommendation = false
         
     var filteredRecipes: [Recipe] {
         if searchText.isEmpty { return recipes }
@@ -34,6 +38,17 @@ struct RecipePickerSheet: View {
                 }
                 
                 if selectedCookingType == .homeCooked {
+                    
+                    Section {
+                        Button {
+                            showingRecommendation = true
+                        } label: {
+                            Label("Ask Chef AI for a Suggestion...", systemImage: "wand.and.stars")
+                                .font(.headline)
+                                .foregroundStyle(.blue)
+                        }
+                    }
+                    
                     Section {
                         if filteredRecipes.isEmpty {
                             Text("No recipes found")
@@ -93,6 +108,16 @@ struct RecipePickerSheet: View {
                         }
                         .disabled(customMealTitle.isEmpty)
                     }
+                }
+            }
+            .sheet(isPresented: $showingRecommendation) {
+                RecommendationSheet(
+                    prefilledDate: prefilledDate,
+                    prefilledMealType: prefilledMealType
+                ) { recipe in
+                    onSelectRecipe(recipe)
+                    showingRecommendation = false
+                    dismiss()
                 }
             }
         }

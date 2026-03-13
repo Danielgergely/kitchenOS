@@ -25,7 +25,7 @@ struct TodayWidget: View {
                         .foregroundStyle(.secondary)
                 }
                 
-                let todaysMeals = meals.filter { Calendar.current.isDateInToday($0.day?.date ?? Date.distantPast) }
+                let todaysMeals = meals.filter { Calendar.current.isDateInToday($0.day.date) }
                 
                 // --- Content ---
                 if todaysMeals.isEmpty {
