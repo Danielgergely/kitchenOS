@@ -29,6 +29,8 @@ struct TotalRecipesWidget: View {
             // Extra Stats
             Text("\(recipeCount)")
                 .font(.system(size: size == .large ? 48 : 36, weight: .bold, design: .rounded))
+                .minimumScaleFactor(0.5)
+                .lineLimit(1)
         }
     }
 }

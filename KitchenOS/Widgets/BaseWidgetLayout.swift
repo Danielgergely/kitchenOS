@@ -57,6 +57,6 @@ struct BaseWidgetLayout<MainContent: View, ExtraStats: View>: View {
         .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 4)
         
         // Aspect ratios: Small = 1:1, Medium = 2.1:1, Large = 1:1
-        .aspectRatio(size == .medium ? 2.1 : 1.0, contentMode: .fit)
+        //.aspectRatio(size == .medium ? 2.1 : 1.0, contentMode: .fit)
     }
 }

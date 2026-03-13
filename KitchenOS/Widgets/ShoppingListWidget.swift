@@ -19,12 +19,13 @@ struct ShoppingListWidget: View {
             subtitle: items.isEmpty ? "All caught up!" : "\(items.count) items"
         ) {
             // Main Content
-            ZStack(alignment: .topTrailing) {
+            ZStack {
                 Circle().fill(Color.orange.opacity(0.1))
                 Image(systemName: "cart")
                     .font(.title)
                     .foregroundStyle(.orange)
-                
+            }
+            .overlay(alignment: .topTrailing) {
                 // Show the red badge if we have items
                 if !items.isEmpty {
                     Text("\(items.count)")

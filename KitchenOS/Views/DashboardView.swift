@@ -6,7 +6,19 @@
 //
 import SwiftUI
 import SwiftData
-import Charts
+
+enum DashboardSlot: Codable, Equatable {
+    case empty
+    case widget(type: DashboardWidget, size: WidgetSize)
+    case spanned
+    
+    var columnSpan: Int {
+        if case .widget(_, let size) = self, size == .medium {
+            return 2
+        }
+        return 1
+    }
+}
 
 struct DashboardView: View {
     @Environment(\.modelContext) private var modelContext
@@ -15,44 +27,50 @@ struct DashboardView: View {
     @Query private var allMeals: [PlannedMeal]
     @Query(filter: #Predicate<ShoppingItem> { $0.isChecked == false })
     private var pendingShoppingItems: [ShoppingItem]
-    var isSidebarOpen: Bool
     
+    var isSidebarOpen: Bool
+    @State private var widgetLayout: [DashboardSlot] = Array(repeating: .empty, count: 9)
     @State private var sidebarWidth: CGFloat = 320.0
     
-    let columns = [
-        GridItem(.adaptive(minimum: 140, maximum: .infinity), spacing: 16)
-    ]
+    @AppStorage("dashboardLayout") var layoutData: Data = Data()
+    
+    @State private var selectedSlotIndex: Int?
+    @State private var showingWidgetPicker = false
     
     var body: some View {
         GeometryReader { geo in
-            let isLandscape = geo.size.width > geo.size.height            
+            let isLandscape = geo.size.width > geo.size.height
             let spacing: CGFloat = 16
             
-            let masterLayout = isLandscape ? AnyLayout(HStackLayout(spacing: spacing)) : AnyLayout(VStackLayout(spacing: spacing))
-            
-            masterLayout {
-                TodayWidget(meals: allMeals, isLandscape: isLandscape)
-                    .frame(
-                        width: isLandscape ? (geo.size.width - spacing) * 0.4 : nil,
-                        height: isLandscape ? nil : (geo.size.height - spacing) * 0.4
-                    )
+            VStack(alignment: .leading, spacing: 24) {
+                headerSection
                 
-                VStack(spacing: spacing) {
-                    ForEach(0..<3, id: \.self) { row in
-                        HStack(spacing: spacing) {
-                            ForEach(0..<3, id: \.self) { col in
-                                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                    .fill(Color(uiColor: .secondarySystemGroupedBackground))
-                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                    .overlay {
-                                        Image(systemName: "plus")
-                                            .font(.largeTitle)
-                                            .foregroundStyle(.tertiary)
+                let masterLayout = isLandscape ? AnyLayout(HStackLayout(spacing: spacing)) : AnyLayout(VStackLayout(spacing: spacing))
+                
+                masterLayout {
+                    TodayWidget(meals: allMeals, isLandscape: isLandscape)
+                        .frame(
+                            width: isLandscape ? (geo.size.width - spacing) * 0.4 : nil,
+                            height: isLandscape ? nil : (geo.size.height - spacing) * 0.4
+                        )
+                    
+                    Grid(horizontalSpacing: spacing, verticalSpacing: spacing) {
+                        ForEach(0..<3, id: \.self) { row in
+                            GridRow {
+                                ForEach(0..<3, id: \.self) { col in
+                                    let index = row * 3 + col
+                                    let slot = widgetLayout[index]
+                                    
+                                    // Only render the view if it is NOT covered by a neighbor
+                                    if slot != .spanned {
+                                        widgetSlot(index: index, slot: slot)
+                                            .gridCellColumns(slot.columnSpan)
                                     }
-                                    .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
+                                }
                             }
                         }
                     }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
@@ -61,6 +79,86 @@ struct DashboardView: View {
         }
         .background(Color(uiColor: .systemGroupedBackground))
         .navigationTitle("Dashboard")
+        .sheet(isPresented: $showingWidgetPicker) {
+            WidgetSelectorSheet { selectedWidget, selectedSize in
+                if let index = selectedSlotIndex {
+                    placeWidget(selectedWidget, size: selectedSize, at: index)
+                }
+            }
+        }
+        .onAppear(perform: loadLayout)
+    }
+    
+    // MARK: - Widget Slot Helper
+    @ViewBuilder
+    private func widgetSlot(index: Int, slot: DashboardSlot) -> some View {
+        Group {
+            switch slot {
+            case .widget(let widgetType, let size):
+                renderWidget(widgetType, size: size)
+            case .empty, .spanned:
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .fill(Color(uiColor: .secondarySystemGroupedBackground))
+                    .overlay {
+                        Image(systemName: "plus")
+                            .font(.largeTitle)
+                            .foregroundStyle(.tertiary)
+                    }
+                    .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onTapGesture {
+            selectedSlotIndex = index
+            showingWidgetPicker = true
+        }
+    }
+
+    @ViewBuilder
+    private func renderWidget(_ type: DashboardWidget, size: WidgetSize) -> some View {
+        switch type {
+        case .mostCooked: MostCookedWidget(recipes: allRecipes, size: size)
+        case .highestRated: HighestRatedWidget(recipes: allRecipes, size: size)
+        case .habits: CookingHabitsWidget(meals: allMeals, size: size)
+        case .shopping: ShoppingListWidget(items: pendingShoppingItems, size: size)
+        case .totalRecipes: TotalRecipesWidget(recipeCount: allRecipes.count, size: size)
+        }
+    }
+    
+    private func placeWidget(_ widget: DashboardWidget, size: WidgetSize, at index: Int) {
+        let col = index % 3 // 0, 1, or 2
+        
+        if size == .medium {
+            // Only allow medium if placed in column 0 or 1
+            if col < 2 {
+                widgetLayout[index] = .widget(type: widget, size: size)
+                widgetLayout[index + 1] = .spanned // Consume the next slot!
+            } else {
+                // Not enough space, fallback to small
+                widgetLayout[index] = .widget(type: widget, size: .small)
+            }
+        } else {
+            widgetLayout[index] = .widget(type: widget, size: size)
+            
+            // Clean up: If we previously had a medium widget here, un-span the neighbor
+            if index < 8 && widgetLayout[index + 1] == .spanned {
+                widgetLayout[index + 1] = .empty
+            }
+        }
+        saveLayout()
+    }
+    
+    // MARK: - Layout Persistence
+    private func saveLayout() {
+        if let encoded = try? JSONEncoder().encode(widgetLayout) {
+            layoutData = encoded
+        }
+    }
+    
+    private func loadLayout() {
+        if let decoded = try? JSONDecoder().decode([DashboardSlot].self, from: layoutData) {
+            widgetLayout = decoded
+        }
     }
     
     // MARK: - Header
@@ -78,15 +176,15 @@ struct DashboardView: View {
             Spacer()
             
             Button {
-                // Edit Dashboard
+                // Future: Edit Dashboard mode toggle
             } label: {
                 Label("Edit", systemImage: "slider.horizontal.3")
                     .font(.headline)
             }
             .buttonStyle(.bordered)
             .tint(.primary)
+            .disabled(true)
         }
-        .padding(.bottom, 8)
     }
     
     private var greeting: String {
