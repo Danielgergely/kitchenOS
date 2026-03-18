@@ -17,6 +17,8 @@ struct MealSlotView: View {
     var onNotes: () -> Void
     var onCloseEmpty: (() -> Void)? = nil
     
+    var leftoverImageData: Data? = nil
+    
     @State private var showingRatingPopover = false
     
     var body: some View {
@@ -31,13 +33,14 @@ struct MealSlotView: View {
                 ZStack(alignment: .bottomLeading) {
                     // --- BACKGROUND LAYER ---
                     if let meal {
-                        if let imageData = meal.recipe?.image, let uiImage = UIImage(data: imageData) {
+                        if let imageData = meal.recipe?.image ?? leftoverImageData, let uiImage = UIImage(data: imageData) {
                             Image(uiImage: uiImage)
                                 .resizable()
                                 .scaledToFill()
                                 .frame(minWidth: 0, maxWidth: .infinity, minHeight: 80, maxHeight: .infinity)
                                 .clipped()
                                 .overlay(Color.black.opacity(0.3))
+                                .opacity(meal.cookingType == .leftovers ? 0.3 : 1.0)
                         } else {
                             ZStack {
                                 let safeCookingType = meal.cookingType ?? .homeCooked

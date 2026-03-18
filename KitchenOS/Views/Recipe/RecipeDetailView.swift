@@ -180,6 +180,7 @@ struct RecipeDetailView: View {
     
     @ViewBuilder
     private func ingredientCard(for ingredient: Ingredient) -> some View {
+        let isAdded = animatingIngredientId == ingredient.id
         HStack {
             VStack(alignment: .leading, spacing: 2) {
                 Text(ingredient.name)
@@ -195,18 +196,38 @@ struct RecipeDetailView: View {
             Button {
                 addToCart(ingredient)
             } label: {
-                Image(systemName: "cart.badge.plus")
+                Image(systemName: isAdded ? "checkmark" : "cart.badge.plus")
                     .font(.title3)
-                    .foregroundStyle(.blue)
+                    .foregroundStyle(isAdded ? .white : .blue)
                     .padding(10)
-                    .background(.blue.opacity(0.1))
+                    .background(isAdded ? Color.green : Color.blue.opacity(0.1))
                     .clipShape(Circle())
+                    .contentTransition(.symbolEffect(.replace))
             }
             .buttonStyle(.plain)
+            .overlay(alignment: .top) {
+                if isAdded {
+                    Text("+1")
+                        .font(.caption.bold())
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color.orange)
+                        .clipShape(Capsule())
+                        .offset(y: -35)
+                        .transition(.asymmetric(
+                            insertion: .scale.combined(with: .move(edge: .bottom)).combined(with: .opacity),
+                            removal: .opacity.combined(with: .move(edge: .top))
+                        ))
+                }
+            }
         }
         .padding()
-        .background(Color(uiColor: .systemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(uiColor: .systemBackground))
+        )
+        .zIndex(isAdded ? 1 : 0)
     }
 
     private func addAllToCart() {

@@ -53,6 +53,7 @@ struct WeekPlanView: View {
                                     DayColumn(
                                         date: date,
                                         plan: plan(for: date),
+                                        getPlan: { queryDate in plan(for: queryDate) },
                                         onRecipeTapped: { recipeToNavigate = $0 },
                                         onNotesTapped: { mealForNotes = $0 },
                                         onPickerTapped: { type, date in
@@ -221,6 +222,8 @@ struct DayColumn: View {
     let date: Date
     let plan: Day?
     
+    let getPlan: (Date) -> Day?
+    
     @State private var expandedSlots: Set<MealType> = []
     
     let onRecipeTapped: (Recipe) -> Void
@@ -255,6 +258,14 @@ struct DayColumn: View {
         let plannedMeal = plan?.meal(for: type)
         let hasMeal = plannedMeal != nil
         let isExpanded = expandedSlots.contains(type)
+        
+        let leftoverImage: Data? = {
+            guard plannedMeal?.cookingType == .leftovers else { return nil }
+            guard let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: date),
+                  let yesterdayPlan = getPlan(yesterday) else { return nil }
+            return yesterdayPlan.meal(for: .dinner)?.recipe?.image
+                ?? yesterdayPlan.meal(for: .lunch)?.recipe?.image
+        }()
         
         if isCollapsible && !hasMeal && !isExpanded {
             Button {
@@ -307,7 +318,8 @@ struct DayColumn: View {
                     withAnimation(.spring()) {
                         _ = expandedSlots.remove(type)
                     }
-                } : nil
+                } : nil,
+                leftoverImageData: leftoverImage
             )
         }
     }
