@@ -50,23 +50,33 @@ class RemindersService: ObservableObject {
     }
     
     private func findOrCreateRemindersCalendar(named name: String) throws -> EKCalendar {
-        // 1) Try to find an existing calendar with the given name
         let calendars = store.calendars(for: .reminder)
-        if let existing = calendars.first(where: { $0.title.caseInsensitiveCompare(name) == .orderedSame }) {
+        
+        // 1) Clean up the search string (removes trailing spaces and makes it lowercase)
+        let searchName = name.trimmingCharacters(in: .whitespaces).lowercased()
+        
+        // 2) Try to find an existing calendar with the given name
+        if let existing = calendars.first(where: {
+            $0.title.trimmingCharacters(in: .whitespaces).lowercased() == searchName
+        }) {
+            print("✅ Found existing list: \(existing.title)")
             return existing
         }
 
-        // 2) Need to create a new one. Pick a suitable source.
-        let preferredSource = store.sources.first(where: { $0.sourceType == .calDAV && $0.title.contains("iCloud") })
-            ?? store.sources.first(where: { $0.sourceType == .local })
-
-        guard let source = preferredSource else {
-            throw NSError(domain: "RemindersService", code: 1, userInfo: [NSLocalizedDescriptionKey: "No suitable source found for creating a reminders list."])
-        }
-
+        // 3) Need to create a new one. Pick a suitable source.
+        print("⚠️ List not found. Creating new list: \(name)")
         let newCalendar = EKCalendar(for: .reminder, eventStore: store)
         newCalendar.title = name
-        newCalendar.source = source
+        
+        if let defaultSource = store.defaultCalendarForNewReminders()?.source {
+            newCalendar.source = defaultSource
+        } else if let calDAVSource = store.sources.first(where: { $0.sourceType == .calDAV }) {
+            newCalendar.source = calDAVSource
+        } else if let localSource = store.sources.first(where: { $0.sourceType == .local }) {
+            newCalendar.source = localSource
+        } else {
+            throw NSError(domain: "RemindersService", code: 1, userInfo: [NSLocalizedDescriptionKey: "No suitable source found for creating a reminders list."])
+        }
 
         try store.saveCalendar(newCalendar, commit: true)
         return newCalendar
