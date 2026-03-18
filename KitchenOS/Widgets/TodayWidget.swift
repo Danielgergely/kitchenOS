@@ -53,12 +53,15 @@ struct TodayWidget: View {
                                     .foregroundStyle(.secondary)
                                     .textCase(.uppercase)
                                 
-                                if let data = meal.recipe?.image, let uiImage = UIImage(data: data) {
+                                let leftoverImageData = getLeftoverImage(for: meal)
+                                
+                                if let data = meal.recipe?.image ?? leftoverImageData, let uiImage = UIImage(data: data) {
                                     Image(uiImage: uiImage)
                                         .resizable()
                                         .scaledToFill()
                                         .frame(minWidth: 60, maxWidth: .infinity, minHeight: 40, maxHeight: .infinity)
                                         .clipShape(RoundedRectangle(cornerRadius: 12))
+                                        .opacity(meal.cookingType == .leftovers ? 0.3 : 1.0)
                                 } else {
                                     RoundedRectangle(cornerRadius: 12)
                                         .fill(Color.blue.opacity(0.1))
@@ -80,5 +83,24 @@ struct TodayWidget: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
+    }
+    
+    private func getLeftoverImage(for meal: PlannedMeal) -> Data? {
+        guard meal.cookingType == .leftovers else { return nil }
+        
+        let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: meal.day.date) ?? Date()
+        
+        // Find all meals from yesterday
+        let yesterdaysMeals = meals.filter { Calendar.current.isDate($0.day.date, inSameDayAs: yesterday) }
+        
+        // Try to grab dinner first, otherwise fallback to lunch
+        if let dinnerImg = yesterdaysMeals.first(where: { $0.type == .dinner })?.recipe?.image {
+            return dinnerImg
+        }
+        if let lunchImg = yesterdaysMeals.first(where: { $0.type == .lunch })?.recipe?.image {
+            return lunchImg
+        }
+        
+        return nil
     }
 }
