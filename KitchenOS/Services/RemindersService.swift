@@ -7,7 +7,7 @@
 import Combine
 import SwiftUI
 import Foundation
-import EventKit
+internal import EventKit
 
 @MainActor
 class RemindersService: ObservableObject {
@@ -40,6 +40,8 @@ class RemindersService: ObservableObject {
                 reminder.calendar = targetList
 
                 try store.save(reminder, commit: false)
+                
+                item.reminderId = reminder.calendarItemIdentifier
             }
 
             try store.commit()
@@ -80,5 +82,22 @@ class RemindersService: ObservableObject {
 
         try store.saveCalendar(newCalendar, commit: true)
         return newCalendar
+    }
+    
+    func syncItemsWithReminders(items: [ShoppingItem]) {
+        // Only check items that actually have a linked reminder ID and aren't checked yet
+        let linkedItems = items.filter { $0.reminderId != nil && !$0.isChecked }
+        
+        for item in linkedItems {
+            // Look up the exact reminder using the secret ID
+            if let reminderId = item.reminderId,
+               let reminder = store.calendarItem(withIdentifier: reminderId) as? EKReminder {
+                
+                // If it is checked off in Apple Reminders, check it off in KitchenOS!
+                if reminder.isCompleted {
+                    item.isChecked = true
+                }
+            }
+        }
     }
 }

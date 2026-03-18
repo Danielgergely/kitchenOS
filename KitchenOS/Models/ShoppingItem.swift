@@ -14,6 +14,7 @@ class ShoppingItem {
     var unit: Unit
     var isChecked: Bool = false
     var createdAt: Date = Date()
+    var reminderId: String? = nil
 
     init(name: String, amount: Double, unit: Unit) {
         self.name = name

@@ -6,6 +6,7 @@
 //
 import SwiftUI
 import SwiftData
+internal import EventKit
 
 struct ShoppingListView: View {
     @Environment(\.modelContext) private var modelContext
@@ -84,6 +85,16 @@ struct ShoppingListView: View {
                             Label("Clear Checked", systemImage: "trash")
                         }
                     }
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .EKEventStoreChanged)) { _ in
+                Task { @MainActor in
+                    RemindersService.shared.syncItemsWithReminders(items: items)
+                }
+            }
+            .onAppear {
+                Task { @MainActor in
+                    RemindersService.shared.syncItemsWithReminders(items: items)
                 }
             }
         }
