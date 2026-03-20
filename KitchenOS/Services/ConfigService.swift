@@ -14,4 +14,19 @@ struct Secrets {
         }
         return key
     }
+    // supabase stuff
+    static var supabaseURL: URL {
+        guard let urlString = Bundle.main.object(forInfoDictionaryKey: "SUPABASE_URL") as? String,
+              let url = URL(string: urlString) else {
+            fatalError("Supabase URL not found or invalid in Info.plist.")
+        }
+        return url
+    }
+    
+    static var supabasePublishableKey: String {
+        guard let key = Bundle.main.object(forInfoDictionaryKey: "SUPABASE_PUBLISHABLE_KEY") as? String else {
+            fatalError("Supabase Publishable Key not found in Info.plist.")
+        }
+        return key
+    }
 }
