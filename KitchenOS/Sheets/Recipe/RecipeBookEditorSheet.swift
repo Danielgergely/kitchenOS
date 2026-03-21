@@ -31,6 +31,7 @@ struct RecipeBookEditorSheet: View {
     // publish stuff
     @State private var isPublishing = false
     @State private var publishMessage = ""
+    @AppStorage("isAdminMode") private var isAdminMode: Bool = false
     
     var body: some View {
         NavigationStack {
@@ -86,7 +87,7 @@ struct RecipeBookEditorSheet: View {
                     }
                 }
                 // --- ADMIN ONLY: PUBLISH TO STORE ---
-                if let book = bookToEdit {
+                if isAdminMode, let book = bookToEdit {
                     Section {
                         Button {
                             publishToStore(book: book)

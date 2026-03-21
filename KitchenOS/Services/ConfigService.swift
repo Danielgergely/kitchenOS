@@ -30,4 +30,11 @@ struct Secrets {
         }
         return key
     }
+    
+    static var adminPassword: String {
+        guard let key = Bundle.main.object(forInfoDictionaryKey: "ADMIN_PASSWORD") as? String else {
+            fatalError("Admin Password not found in Info.plist.")
+        }
+        return key
+    }
 }
