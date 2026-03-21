@@ -11,22 +11,19 @@ struct RecipeStoreView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var existingBooks: [RecipeBook]
     
-    // State for the store data
     @State private var availableBooks: [StoreRecipeBook] = []
     @State private var isLoading = true
     @State private var errorMessage: String?
     
-    // State for downloading & animations
     @State private var downloadingBookId: UUID? = nil
     @State private var showingSuccessToast = false
     @State private var successMessage = ""
     
-    // State for the collision alert
     @State private var pendingImport: TransferBackup? = nil
     @State private var showingOverwriteAlert = false
     @State private var collidingBookName = ""
     
-    let gridColumns = [GridItem(.adaptive(minimum: 160, maximum: 200), spacing: 16)]
+    let gridColumns = [GridItem(.adaptive(minimum: 240, maximum: 300), spacing: 20)]
     
     var body: some View {
         NavigationStack {
@@ -36,7 +33,14 @@ struct RecipeStoreView: View {
                 } else if let errorMessage {
                     Text(errorMessage).foregroundStyle(.red).padding(.top, 50)
                 } else {
-                    storeGrid // Extracted this out to fix the compiler error!
+                    VStack(alignment: .leading) {
+                        Text("Featured Cookbooks")
+                            .font(.title2.bold())
+                            .padding(.horizontal)
+                            .padding(.top, 10)
+                        
+                        storeGrid
+                    }
                 }
             }
             .navigationTitle("Recipe Store")
@@ -44,7 +48,7 @@ struct RecipeStoreView: View {
             .navigationDestination(for: StoreRecipeBook.self) { book in
                 StoreBookDetailView(
                     book: book,
-                    isOwned: isBookOwned(id: book.id),
+                    isOwned: isBookOwned(storeBookId: book.id),
                     isDownloading: downloadingBookId == book.id
                 ) {
                     handlePurchase(book: book)
@@ -53,7 +57,6 @@ struct RecipeStoreView: View {
             .task {
                 await fetchBooks()
             }
-            // --- THE SUCCESS ANIMATION OVERLAY ---
             .overlay(alignment: .top) {
                 if showingSuccessToast {
                     Label(successMessage, systemImage: "checkmark.circle.fill")
@@ -67,7 +70,6 @@ struct RecipeStoreView: View {
                         .padding(.top, 16)
                 }
             }
-            // The Overwrite Alert
             .alert("Book Already Exists", isPresented: $showingOverwriteAlert) {
                 Button("Overwrite", role: .destructive) {
                     if let backup = pendingImport {
@@ -87,12 +89,12 @@ struct RecipeStoreView: View {
     
     @ViewBuilder
     private var storeGrid: some View {
-        LazyVGrid(columns: gridColumns, spacing: 16) {
+        LazyVGrid(columns: gridColumns, spacing: 24) {
             ForEach(availableBooks, id: \.id) { book in
                 NavigationLink(value: book) {
                     StoreBookSquare(
                         book: book,
-                        isOwned: isBookOwned(id: book.id),
+                        isOwned: isBookOwned(storeBookId: book.id),
                         isDownloading: downloadingBookId == book.id
                     ) {
                         handlePurchase(book: book)
@@ -106,16 +108,11 @@ struct RecipeStoreView: View {
     
     // MARK: - Functions
     
-    private func isBookOwned(id: UUID) -> Bool {
-        return existingBooks.contains(where: { $0.id == id })
-    }
-    
     private func triggerSuccessAnimation(for title: String) {
         successMessage = "\(title) Downloaded!"
         withAnimation(.spring()) {
             showingSuccessToast = true
         }
-        // Hide it after 3 seconds
         DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
             withAnimation(.easeInOut) {
                 showingSuccessToast = false
@@ -155,13 +152,28 @@ struct RecipeStoreView: View {
                 await MainActor.run {
                     downloadingBookId = nil
                     
-                    if let incomingBook = backup.books.first, isBookOwned(id: incomingBook.id) {
-                        self.collidingBookName = incomingBook.title
-                        self.pendingImport = backup
-                        self.showingOverwriteAlert = true
-                    } else {
-                        try? DataExchangeService.executeImport(backup: backup, context: modelContext, overwrite: false)
-                        triggerSuccessAnimation(for: book.title)
+                    if let incomingBook = backup.books.first {
+                        // Check if we already own it via ID, or if there's a title collision with an unlinked book
+                        let alreadyOwned = isBookOwned(storeBookId: book.id)
+                        let titleCollision = existingBooks.contains(where: { $0.title == incomingBook.title && $0.storefrontId == nil })
+                        
+                        if alreadyOwned || titleCollision {
+                            self.collidingBookName = incomingBook.title
+                            self.pendingImport = backup
+                            self.showingOverwriteAlert = true
+                        } else {
+                            // Import the data
+                            try? DataExchangeService.executeImport(backup: backup, context: modelContext, overwrite: false)
+                            
+                            // Find the newly imported book and permanently link it!
+                            let fetchDescriptor = FetchDescriptor<RecipeBook>(predicate: #Predicate { $0.title == incomingBook.title })
+                            if let newlyImportedBook = try? modelContext.fetch(fetchDescriptor).first {
+                                newlyImportedBook.storefrontId = book.id
+                                try? modelContext.save()
+                            }
+                            
+                            triggerSuccessAnimation(for: book.title)
+                        }
                     }
                 }
             } catch {
@@ -171,5 +183,9 @@ struct RecipeStoreView: View {
                 }
             }
         }
+    }
+    
+    private func isBookOwned(storeBookId: UUID) -> Bool {
+        return existingBooks.contains(where: { $0.storefrontId == storeBookId })
     }
 }

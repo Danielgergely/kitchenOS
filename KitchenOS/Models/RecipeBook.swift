@@ -10,6 +10,7 @@ import SwiftData
 @Model
 class RecipeBook {
     var id: UUID
+    var storefrontId: UUID?
     var title: String
     var desc: String?
     var icon: String

@@ -28,6 +28,10 @@ struct RecipeBookEditorSheet: View {
     @State private var showingDeleteConfirmation = false
     var onDelete: (() -> Void)? = nil
     
+    // publish stuff
+    @State private var isPublishing = false
+    @State private var publishMessage = ""
+    
     var body: some View {
         NavigationStack {
             Form {
@@ -79,6 +83,36 @@ struct RecipeBookEditorSheet: View {
                             Text("Delete Cookbook")
                                 .frame(maxWidth: .infinity, alignment: .center)
                         }
+                    }
+                }
+                // --- ADMIN ONLY: PUBLISH TO STORE ---
+                if let book = bookToEdit {
+                    Section {
+                        Button {
+                            publishToStore(book: book)
+                        } label: {
+                            HStack {
+                                if isPublishing {
+                                    ProgressView().padding(.trailing, 8)
+                                    Text("Publishing to Cloud...")
+                                } else {
+                                    Image(systemName: "icloud.and.arrow.up")
+                                    Text("Publish to Storefront")
+                                }
+                            }
+                            .frame(maxWidth: .infinity, alignment: .center)
+                            .foregroundStyle(.blue)
+                        }
+                        .disabled(isPublishing)
+                        
+                        if !publishMessage.isEmpty {
+                            Text(publishMessage)
+                                .font(.caption)
+                                .foregroundStyle(publishMessage.contains("✅") ? .green : .red)
+                                .frame(maxWidth: .infinity, alignment: .center)
+                        }
+                    } header: {
+                        Text("Admin Actions")
                     }
                 }
             }
@@ -188,6 +222,28 @@ struct RecipeBookEditorSheet: View {
             }
         } else {
             dismiss()
+        }
+    }
+    
+    func publishToStore(book: RecipeBook) {
+        isPublishing = true
+        publishMessage = "Compressing & Uploading..."
+        
+        Task {
+            do {
+                try await AdminPublishService.shared.publishBookToStore(book: book, price: 0.0)
+                
+                await MainActor.run {
+                    publishMessage = "✅ Published successfully!"
+                    isPublishing = false
+                }
+            } catch {
+                await MainActor.run {
+                    publishMessage = "❌ Error: \(error.localizedDescription)"
+                    isPublishing = false
+                    print("Publish Error: \(error)")
+                }
+            }
         }
     }
 }

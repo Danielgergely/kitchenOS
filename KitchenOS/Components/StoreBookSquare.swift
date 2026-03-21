@@ -13,78 +13,97 @@ struct StoreBookSquare: View {
     let onDownload: () -> Void
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            // 1. The Cover Image
+        VStack(alignment: .leading, spacing: 0) {
+            
+            // --- Cover Image ---
             ZStack {
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(Color(uiColor: .secondarySystemBackground))
-                
                 if let urlString = book.coverImageUrl, let url = URL(string: urlString) {
                     AsyncImage(url: url) { phase in
-                        switch phase {
-                        case .empty:
-                            ProgressView()
-                        case .success(let image):
-                            image.resizable()
-                                 .scaledToFill()
-                        case .failure:
-                            Image(systemName: "book.closed").foregroundStyle(.tertiary).font(.largeTitle)
-                        @unknown default:
-                            EmptyView()
+                        if let image = phase.image {
+                            Color.clear
+                                .overlay(
+                                    image
+                                        .resizable()
+                                        .scaledToFill()
+                                )
+                                .clipped()
+                        } else {
+                            ZStack {
+                                Color(uiColor: .secondarySystemBackground)
+                                ProgressView()
+                            }
                         }
                     }
                 } else {
-                    Image(systemName: "book.closed").foregroundStyle(.tertiary).font(.largeTitle)
-                }
-            }
-            .frame(height: 160)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .shadow(color: .black.opacity(0.1), radius: 5, y: 2)
-            
-            // 2. The Details
-            Text(book.title)
-                .font(.headline)
-                .lineLimit(1)
-            
-            if let desc = book.description {
-                Text(desc)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
-            }
-            
-            Spacer(minLength: 0)
-            
-            // 3. The Price / Download Button
-            Button {
-                onDownload()
-            } label: {
-                HStack {
-                    Spacer()
-                    if isDownloading {
-                        ProgressView().controlSize(.small).tint(.white)
-                    } else if isOwned {
-                        // Show a checkmark if they already have it in their library
-                        Image(systemName: "checkmark")
-                    } else {
-                        Text(book.price == 0 ? "GET" : "$\(book.price, specifier: "%.2f")")
-                            .font(.subheadline.bold())
+                    ZStack {
+                        Color(uiColor: .secondarySystemBackground)
+                        Image(systemName: "book.closed").foregroundStyle(.tertiary).font(.largeTitle)
                     }
-                    Spacer()
                 }
-                .padding(.vertical, 8)
-                // Grey out the button if owned
-                .background(isOwned ? Color.secondary : (book.price == 0 ? Color.blue : Color.green))
-                .foregroundStyle(.white)
-                .clipShape(Capsule())
             }
-            // Disable the button if downloading, already owned, or broken link
-            .disabled(isDownloading || isOwned || book.jsonDownloadUrl == nil)
+            .frame(height: 180)
+            .frame(maxWidth: .infinity)
+            
+            // --- Details & Button Area ---
+            VStack(alignment: .leading, spacing: 6) {
+                // Title
+                Text(book.title)
+                    .font(.headline)
+                    .lineLimit(1)
+                
+                // Recipe Count
+                if let count = book.recipeCount {
+                    Text("\(count) Recipes")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                
+                // Bottom Row: Price & Button
+                HStack(alignment: .center) {
+                    Text(book.price == 0 ? "Free" : "$\(book.price, specifier: "%.2f")")
+                        .font(.subheadline.bold())
+                        .foregroundStyle(.secondary)
+                    
+                    Spacer()
+                    
+                    Button {
+                        onDownload()
+                    } label: {
+                        HStack(spacing: 4) {
+                            if isDownloading {
+                                ProgressView().controlSize(.small)
+                            } else if isOwned {
+                                Text("In Library")
+                                    .font(.caption.bold())
+                                    .foregroundStyle(Color.green)
+                                Image(systemName: "checkmark")
+                                    .font(.caption.bold())
+                                    .foregroundStyle(Color.green)
+                            } else {
+                                Text("GET").font(.caption.bold())
+                            }
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 6)
+                        .background(isOwned ? Color(uiColor: .tertiarySystemFill) : Color.blue.opacity(0.15))
+                        .foregroundStyle(isOwned ? Color.secondary : Color.blue)
+                        .clipShape(Capsule())
+                    }
+                    .disabled(isDownloading || isOwned || book.jsonDownloadUrl == nil)
+                }
+                .padding(.top, 4)
+            }
+            .padding(12)
         }
-        .frame(maxWidth: .infinity)
-        .padding()
-        .background(Color(uiColor: .systemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 20))
-        .shadow(color: .black.opacity(0.05), radius: 10)
+        // --- CARD STYLING ---
+        .background(Color(uiColor: .secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.primary.opacity(0.1), lineWidth: 1) // Subtle border
+        )
+        .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 4) // Drop shadow
+        .contentShape(Rectangle()) // Ensures the whole card is tappable
     }
 }
+
