@@ -13,9 +13,7 @@ struct SettingsView: View {
     @Query private var allRecipes: [Recipe]
     @Query private var allBooks: [RecipeBook]
     
-    @State private var exportFileURL: URL?
-    @State private var showingFileImporter = false
-    @State private var showingPreferencesSheet = false // Controls our new profile sheet
+    @State private var showingPreferencesSheet = false
     
     @AppStorage("remindersListName") private var remindersListName: String = "KitchenOS"
     
@@ -44,48 +42,8 @@ struct SettingsView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-                
-                // --- DATA MANAGEMENT SECTION ---
-                Section(header: Text("Data Management"), footer: Text("Export your entire recipe library as a JSON file to share with others, or import an existing backup.")) {
-                    
-                    if let fileURL = exportFileURL {
-                        ShareLink(item: fileURL) {
-                            Label("Export Recipes (\(allRecipes.count))", systemImage: "square.and.arrow.up")
-                        }
-                    } else {
-                        Button {
-                            // Generate the file when the user enters the settings view
-                            exportFileURL = DataExchangeService.generateExportFile(from: allRecipes, books: allBooks)
-                        } label: {
-                            Label("Prepare Export File", systemImage: "arrow.triangle.2.circlepath")
-                        }
-                    }
-                    
-                    Button {
-                        showingFileImporter = true
-                    } label: {
-                        Label("Import Recipes", systemImage: "square.and.arrow.down")
-                    }
-                }
             }
             .navigationTitle("Settings")
-            .onAppear {
-                exportFileURL = DataExchangeService.generateExportFile(from: allRecipes, books: allBooks)
-            }
-            .fileImporter(
-                isPresented: $showingFileImporter,
-                allowedContentTypes: [.json],
-                allowsMultipleSelection: false
-            ) { result in
-                switch result {
-                case .success(let urls):
-                    if let url = urls.first {
-                        DataExchangeService.importRecipes(from: url, context: modelContext)
-                    }
-                case .failure(let error):
-                    print("Error selecting file: \(error.localizedDescription)")
-                }
-            }
             .sheet(isPresented: $showingPreferencesSheet) {
                 UserPreferencesSheet()
             }

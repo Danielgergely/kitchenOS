@@ -11,15 +11,17 @@ import SwiftData
 class RecipeBook {
     var id: UUID
     var title: String
+    var desc: String?
     var icon: String
     @Attribute(.externalStorage) var image: Data?
     
     @Relationship(deleteRule: .cascade, inverse: \Recipe.book)
     var recipes: [Recipe]? = []
     
-    init(id: UUID = UUID(), title: String, icon: String = "folder", image: Data? = nil, recipes: [Recipe]? = nil) {
+    init(id: UUID = UUID(), title: String, desc: String? = nil, icon: String = "folder", image: Data? = nil, recipes: [Recipe]? = nil) {
         self.id = id
         self.title = title
+        self.desc = desc
         self.icon = icon
         self.image = image
         self.recipes = recipes

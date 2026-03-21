@@ -14,11 +14,15 @@ struct RecipeBookEditorSheet: View {
     var bookToEdit: RecipeBook?
     
     @State private var title: String = ""
+    @State private var desc: String = ""
     @State private var coverImageData: Data? = nil
     
     @State private var showingImageSourceDialog = false
     @State private var showingImagePicker = false
     @State private var imageSourceType: UIImagePickerController.SourceType = .photoLibrary
+    
+    @State private var exportURL: URL?
+    @State private var showShareSheet = false
     
     // delete stuff
     @State private var showingDeleteConfirmation = false
@@ -64,6 +68,8 @@ struct RecipeBookEditorSheet: View {
                 Section {
                     TextField("Cookbook Title", text: $title)
                         .font(.headline)
+                    TextField("Description (Optional)", text: $desc, axis: .vertical)
+                        .lineLimit(3...6)
                 }
                 if bookToEdit != nil {
                     Section {
@@ -82,6 +88,26 @@ struct RecipeBookEditorSheet: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
                 }
+                
+                if let book = bookToEdit {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button {
+                            let safeTitle = book.title.replacingOccurrences(of: " ", with: "_")
+                            
+                            if let url = DataExchangeService.generateExportFile(
+                                from: book.recipes ?? [],
+                                books: [book],
+                                filename: "\(safeTitle)_Book.json"
+                            ) {
+                                exportURL = url
+                                showShareSheet = true
+                            }
+                        } label: {
+                            Image(systemName: "square.and.arrow.up")
+                        }
+                    }
+                }
+                
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") { saveBook() }
                     .disabled(title.isEmpty)
@@ -126,7 +152,13 @@ struct RecipeBookEditorSheet: View {
             .onAppear {
                 if let book = bookToEdit {
                     title = book.title
+                    desc = book.desc ?? ""
                     coverImageData = book.image
+                }
+            }
+            .sheet(isPresented: $showShareSheet) {
+                if let exportURL {
+                    ShareSheet(activityItems: [exportURL])
                 }
             }
         }
@@ -135,9 +167,10 @@ struct RecipeBookEditorSheet: View {
     func saveBook() {
         if let existingBook = bookToEdit {
             existingBook.title = title
+            existingBook.desc = desc
             existingBook.image = coverImageData
         } else {
-            let newBook = RecipeBook(title: title, image: coverImageData)
+            let newBook = RecipeBook(title: title, desc: desc, image: coverImageData)
             modelContext.insert(newBook)
         }
         dismiss()
@@ -145,10 +178,17 @@ struct RecipeBookEditorSheet: View {
     
     func deleteBook() {
         if let book = bookToEdit {
-            modelContext.delete(book)
-            try? modelContext.save()
+            dismiss()
+            
             onDelete?()
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                modelContext.delete(book)
+                try? modelContext.save()
+            }
+        } else {
+            dismiss()
         }
-        dismiss()
     }
 }
+

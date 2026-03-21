@@ -16,8 +16,9 @@ struct Secrets {
     }
     // supabase stuff
     static var supabaseURL: URL {
-        guard let urlString = Bundle.main.object(forInfoDictionaryKey: "SUPABASE_URL") as? String,
-              let url = URL(string: urlString) else {
+        guard let domainString = Bundle.main.object(forInfoDictionaryKey: "SUPABASE_URL") as? String,
+              // Manually prepend the https:// here!
+              let url = URL(string: "https://\(domainString)") else {
             fatalError("Supabase URL not found or invalid in Info.plist.")
         }
         return url
