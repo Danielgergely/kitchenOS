@@ -17,6 +17,8 @@ struct RecipeDetailView: View {
     @State private var isIngredientsExpanded: Bool = true
     @State private var animatingIngredientId: UUID? = nil
     
+    @State private var isShowingCookingMode = false
+    
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
@@ -78,6 +80,19 @@ struct RecipeDetailView: View {
                     }
                     
                     RecipeStatsCard(recipe: recipe)
+                    
+                    Button {
+                        isShowingCookingMode = true
+                    } label: {
+                        Label("Start Cooking Mode", systemImage: "play.fill")
+                            .font(.headline)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.orange)
+                            .foregroundColor(.white)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+                    .padding(.horizontal)
                     
                     Divider()
                     
@@ -175,6 +190,9 @@ struct RecipeDetailView: View {
             RecipeEditorSheet(recipeToEdit: recipe) {
                 dismiss()
             }
+        }
+        .fullScreenCover(isPresented: $isShowingCookingMode) {
+            CookModeView(recipe: recipe)
         }
     }
     

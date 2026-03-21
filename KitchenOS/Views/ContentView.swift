@@ -11,8 +11,8 @@ enum NavigationItem: String, CaseIterable, Identifiable {
     case calendar = "Week Plan"
     case recipes = "Recipes"
     case shopping = "Shopping List"
-    case pantry = "Pantry"
     case store = "Recipe Store"
+    case pantry = "Pantry"
     
     var id: String { self.rawValue }
     
@@ -22,8 +22,8 @@ enum NavigationItem: String, CaseIterable, Identifiable {
         case .calendar: return "calendar"
         case .recipes: return "book.pages"
         case .shopping: return "list.bullet.clipboard"
+        case .store: return "storefront"
         case .pantry: return "cabinet"
-        case .store: return "cart"
         }
     }
 }
@@ -82,10 +82,10 @@ struct ContentView: View {
                         RecipeLibraryView()
                     case .shopping:
                         ShoppingListView()
-                    case .pantry:
-                        ContentUnavailableView("Pantry", systemImage: "cabinet", description: Text("Coming soon"))
                     case .store:
                         RecipeStoreView()
+                    case .pantry:
+                        ContentUnavailableView("Pantry", systemImage: "cabinet", description: Text("Coming soon"))
                     }
                 } else {
                     Text("Plese select an item from the sidebar")

@@ -174,16 +174,6 @@ struct DashboardView: View {
                     .font(.largeTitle.weight(.bold))
             }
             Spacer()
-            
-            Button {
-                // Future: Edit Dashboard mode toggle
-            } label: {
-                Label("Edit", systemImage: "slider.horizontal.3")
-                    .font(.headline)
-            }
-            .buttonStyle(.bordered)
-            .tint(.primary)
-            .disabled(true)
         }
     }
     

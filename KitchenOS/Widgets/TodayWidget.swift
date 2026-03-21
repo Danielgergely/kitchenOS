@@ -31,7 +31,7 @@ struct TodayWidget: View {
                 if todaysMeals.isEmpty {
                     VStack(spacing: 12) {
                         Spacer()
-                        Image(systemName: "plate")
+                        Image(systemName: "fork.knife.circle.fill")
                             .font(.system(size: 40))
                             .foregroundStyle(.tertiary)
                         Text("Nothing planned for today.")
