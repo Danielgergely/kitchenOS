@@ -1,7 +1,7 @@
 {
   "images" : [
     {
-      "filename" : "kichenOS 1.png",
+      "filename" : "KitchenOS.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
@@ -13,7 +13,7 @@
           "value" : "dark"
         }
       ],
-      "filename" : "kichenOS.png",
+      "filename" : "KitchenOS_dark.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
@@ -25,6 +25,7 @@
           "value" : "tinted"
         }
       ],
+      "filename" : "KitchenOS_tinted.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"

@@ -5,6 +5,7 @@
 //  Created by Daniel Gergely on 2/16/26.
 //
 import SwiftUI
+import SwiftData
 
 enum NavigationItem: String, CaseIterable, Identifiable {
     case dashboard = "Dashboard"
