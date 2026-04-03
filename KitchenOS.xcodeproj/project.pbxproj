@@ -1,0 +1,700 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		01140F182F52576C00AF1A43 /* GoogleGenerativeAI in Frameworks */ = {isa = PBXBuildFile; productRef = 01140F172F52576C00AF1A43 /* GoogleGenerativeAI */; };
+		01622D622F6EA13D0037FD5D /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = 01622D612F6EA13D0037FD5D /* Auth */; };
+		01622D642F6EA13D0037FD5D /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = 01622D632F6EA13D0037FD5D /* Functions */; };
+		01622D662F6EA13D0037FD5D /* PostgREST in Frameworks */ = {isa = PBXBuildFile; productRef = 01622D652F6EA13D0037FD5D /* PostgREST */; };
+		01622D682F6EA13D0037FD5D /* Realtime in Frameworks */ = {isa = PBXBuildFile; productRef = 01622D672F6EA13D0037FD5D /* Realtime */; };
+		01622D6A2F6EA13D0037FD5D /* Storage in Frameworks */ = {isa = PBXBuildFile; productRef = 01622D692F6EA13D0037FD5D /* Storage */; };
+		01622D6C2F6EA13D0037FD5D /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 01622D6B2F6EA13D0037FD5D /* Supabase */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		014F5F562F437222003FBDE4 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 014F5F3E2F437220003FBDE4 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 014F5F452F437220003FBDE4;
+			remoteInfo = KitchenOS;
+		};
+		014F5F602F437222003FBDE4 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 014F5F3E2F437220003FBDE4 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 014F5F452F437220003FBDE4;
+			remoteInfo = KitchenOS;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		014F5F462F437220003FBDE4 /* KitchenOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = KitchenOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		014F5F552F437222003FBDE4 /* KitchenOSTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = KitchenOSTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		014F5F5F2F437222003FBDE4 /* KitchenOSUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = KitchenOSUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		01140F6A2F54D03B00AF1A43 /* Exceptions for "KitchenOS" folder in "KitchenOS" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Config.xcconfig,
+				Info.plist,
+			);
+			target = 014F5F452F437220003FBDE4 /* KitchenOS */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		014F5F482F437220003FBDE4 /* KitchenOS */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				01140F6A2F54D03B00AF1A43 /* Exceptions for "KitchenOS" folder in "KitchenOS" target */,
+			);
+			path = KitchenOS;
+			sourceTree = "<group>";
+		};
+		014F5F582F437222003FBDE4 /* KitchenOSTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = KitchenOSTests;
+			sourceTree = "<group>";
+		};
+		014F5F622F437222003FBDE4 /* KitchenOSUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = KitchenOSUITests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		014F5F432F437220003FBDE4 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				01622D6C2F6EA13D0037FD5D /* Supabase in Frameworks */,
+				01622D6A2F6EA13D0037FD5D /* Storage in Frameworks */,
+				01622D662F6EA13D0037FD5D /* PostgREST in Frameworks */,
+				01622D642F6EA13D0037FD5D /* Functions in Frameworks */,
+				01622D622F6EA13D0037FD5D /* Auth in Frameworks */,
+				01622D682F6EA13D0037FD5D /* Realtime in Frameworks */,
+				01140F182F52576C00AF1A43 /* GoogleGenerativeAI in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		014F5F522F437222003FBDE4 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		014F5F5C2F437222003FBDE4 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		01140F162F52576C00AF1A43 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		014F5F3D2F437220003FBDE4 = {
+			isa = PBXGroup;
+			children = (
+				014F5F482F437220003FBDE4 /* KitchenOS */,
+				014F5F582F437222003FBDE4 /* KitchenOSTests */,
+				014F5F622F437222003FBDE4 /* KitchenOSUITests */,
+				01140F162F52576C00AF1A43 /* Frameworks */,
+				014F5F472F437220003FBDE4 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		014F5F472F437220003FBDE4 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				014F5F462F437220003FBDE4 /* KitchenOS.app */,
+				014F5F552F437222003FBDE4 /* KitchenOSTests.xctest */,
+				014F5F5F2F437222003FBDE4 /* KitchenOSUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		014F5F452F437220003FBDE4 /* KitchenOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 014F5F692F437222003FBDE4 /* Build configuration list for PBXNativeTarget "KitchenOS" */;
+			buildPhases = (
+				014F5F422F437220003FBDE4 /* Sources */,
+				014F5F432F437220003FBDE4 /* Frameworks */,
+				014F5F442F437220003FBDE4 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				014F5F482F437220003FBDE4 /* KitchenOS */,
+			);
+			name = KitchenOS;
+			packageProductDependencies = (
+				01140F172F52576C00AF1A43 /* GoogleGenerativeAI */,
+				01622D612F6EA13D0037FD5D /* Auth */,
+				01622D632F6EA13D0037FD5D /* Functions */,
+				01622D652F6EA13D0037FD5D /* PostgREST */,
+				01622D672F6EA13D0037FD5D /* Realtime */,
+				01622D692F6EA13D0037FD5D /* Storage */,
+				01622D6B2F6EA13D0037FD5D /* Supabase */,
+			);
+			productName = KitchenOS;
+			productReference = 014F5F462F437220003FBDE4 /* KitchenOS.app */;
+			productType = "com.apple.product-type.application";
+		};
+		014F5F542F437222003FBDE4 /* KitchenOSTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 014F5F6C2F437222003FBDE4 /* Build configuration list for PBXNativeTarget "KitchenOSTests" */;
+			buildPhases = (
+				014F5F512F437222003FBDE4 /* Sources */,
+				014F5F522F437222003FBDE4 /* Frameworks */,
+				014F5F532F437222003FBDE4 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				014F5F572F437222003FBDE4 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				014F5F582F437222003FBDE4 /* KitchenOSTests */,
+			);
+			name = KitchenOSTests;
+			packageProductDependencies = (
+			);
+			productName = KitchenOSTests;
+			productReference = 014F5F552F437222003FBDE4 /* KitchenOSTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		014F5F5E2F437222003FBDE4 /* KitchenOSUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 014F5F6F2F437222003FBDE4 /* Build configuration list for PBXNativeTarget "KitchenOSUITests" */;
+			buildPhases = (
+				014F5F5B2F437222003FBDE4 /* Sources */,
+				014F5F5C2F437222003FBDE4 /* Frameworks */,
+				014F5F5D2F437222003FBDE4 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				014F5F612F437222003FBDE4 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				014F5F622F437222003FBDE4 /* KitchenOSUITests */,
+			);
+			name = KitchenOSUITests;
+			packageProductDependencies = (
+			);
+			productName = KitchenOSUITests;
+			productReference = 014F5F5F2F437222003FBDE4 /* KitchenOSUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		014F5F3E2F437220003FBDE4 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2620;
+				LastUpgradeCheck = 2640;
+				TargetAttributes = {
+					014F5F452F437220003FBDE4 = {
+						CreatedOnToolsVersion = 26.2;
+					};
+					014F5F542F437222003FBDE4 = {
+						CreatedOnToolsVersion = 26.2;
+						TestTargetID = 014F5F452F437220003FBDE4;
+					};
+					014F5F5E2F437222003FBDE4 = {
+						CreatedOnToolsVersion = 26.2;
+						TestTargetID = 014F5F452F437220003FBDE4;
+					};
+				};
+			};
+			buildConfigurationList = 014F5F412F437220003FBDE4 /* Build configuration list for PBXProject "KitchenOS" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 014F5F3D2F437220003FBDE4;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				01140F122F5250B900AF1A43 /* XCRemoteSwiftPackageReference "generative-ai-swift" */,
+				01622D602F6EA13D0037FD5D /* XCRemoteSwiftPackageReference "supabase-swift" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 014F5F472F437220003FBDE4 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				014F5F452F437220003FBDE4 /* KitchenOS */,
+				014F5F542F437222003FBDE4 /* KitchenOSTests */,
+				014F5F5E2F437222003FBDE4 /* KitchenOSUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		014F5F442F437220003FBDE4 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		014F5F532F437222003FBDE4 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		014F5F5D2F437222003FBDE4 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		014F5F422F437220003FBDE4 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		014F5F512F437222003FBDE4 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		014F5F5B2F437222003FBDE4 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		014F5F572F437222003FBDE4 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 014F5F452F437220003FBDE4 /* KitchenOS */;
+			targetProxy = 014F5F562F437222003FBDE4 /* PBXContainerItemProxy */;
+		};
+		014F5F612F437222003FBDE4 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 014F5F452F437220003FBDE4 /* KitchenOS */;
+			targetProxy = 014F5F602F437222003FBDE4 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		014F5F672F437222003FBDE4 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = 014F5F482F437220003FBDE4 /* KitchenOS */;
+			baseConfigurationReferenceRelativePath = Config.xcconfig;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		014F5F682F437222003FBDE4 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		014F5F6A2F437222003FBDE4 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = 014F5F482F437220003FBDE4 /* KitchenOS */;
+			baseConfigurationReferenceRelativePath = Config.xcconfig;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = S6BT656CHX;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = KitchenOS/Info.plist;
+				INFOPLIST_KEY_NSCameraUsageDescription = "KichenOS needs access to the camera to scan recipes";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "KitchenOS needs to access your photos so you can select images for you items";
+				INFOPLIST_KEY_NSRemindersFullAccessUsageDescription = "KitchenOS needs access to your reminders to add ingredients to your shopping list";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.danielgergely.KitchenOS;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		014F5F6B2F437222003FBDE4 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = S6BT656CHX;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = KitchenOS/Info.plist;
+				INFOPLIST_KEY_NSCameraUsageDescription = "KichenOS needs access to the camera to scan recipes";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "KitchenOS needs to access your photos so you can select images for you items";
+				INFOPLIST_KEY_NSRemindersFullAccessUsageDescription = "KitchenOS needs access to your reminders to add ingredients to your shopping list";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.danielgergely.KitchenOS;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		014F5F6D2F437222003FBDE4 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = 014F5F482F437220003FBDE4 /* KitchenOS */;
+			baseConfigurationReferenceRelativePath = Config.xcconfig;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.danielgergely.KitchenOSTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/KitchenOS.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/KitchenOS";
+			};
+			name = Debug;
+		};
+		014F5F6E2F437222003FBDE4 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.danielgergely.KitchenOSTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/KitchenOS.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/KitchenOS";
+			};
+			name = Release;
+		};
+		014F5F702F437222003FBDE4 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.danielgergely.KitchenOSUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = KitchenOS;
+			};
+			name = Debug;
+		};
+		014F5F712F437222003FBDE4 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.danielgergely.KitchenOSUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = KitchenOS;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		014F5F412F437220003FBDE4 /* Build configuration list for PBXProject "KitchenOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				014F5F672F437222003FBDE4 /* Debug */,
+				014F5F682F437222003FBDE4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		014F5F692F437222003FBDE4 /* Build configuration list for PBXNativeTarget "KitchenOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				014F5F6A2F437222003FBDE4 /* Debug */,
+				014F5F6B2F437222003FBDE4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		014F5F6C2F437222003FBDE4 /* Build configuration list for PBXNativeTarget "KitchenOSTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				014F5F6D2F437222003FBDE4 /* Debug */,
+				014F5F6E2F437222003FBDE4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		014F5F6F2F437222003FBDE4 /* Build configuration list for PBXNativeTarget "KitchenOSUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				014F5F702F437222003FBDE4 /* Debug */,
+				014F5F712F437222003FBDE4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		01140F122F5250B900AF1A43 /* XCRemoteSwiftPackageReference "generative-ai-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/generative-ai-swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.5.6;
+			};
+		};
+		01622D602F6EA13D0037FD5D /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase/supabase-swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.5.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		01140F172F52576C00AF1A43 /* GoogleGenerativeAI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 01140F122F5250B900AF1A43 /* XCRemoteSwiftPackageReference "generative-ai-swift" */;
+			productName = GoogleGenerativeAI;
+		};
+		01622D612F6EA13D0037FD5D /* Auth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 01622D602F6EA13D0037FD5D /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Auth;
+		};
+		01622D632F6EA13D0037FD5D /* Functions */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 01622D602F6EA13D0037FD5D /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Functions;
+		};
+		01622D652F6EA13D0037FD5D /* PostgREST */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 01622D602F6EA13D0037FD5D /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = PostgREST;
+		};
+		01622D672F6EA13D0037FD5D /* Realtime */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 01622D602F6EA13D0037FD5D /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Realtime;
+		};
+		01622D692F6EA13D0037FD5D /* Storage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 01622D602F6EA13D0037FD5D /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Storage;
+		};
+		01622D6B2F6EA13D0037FD5D /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 01622D602F6EA13D0037FD5D /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 014F5F3E2F437220003FBDE4 /* Project object */;
+}
