@@ -455,6 +455,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = KitchenOS/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = MealOS;
 				INFOPLIST_KEY_NSCameraUsageDescription = "KichenOS needs access to the camera to scan recipes";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "KitchenOS needs to access your photos so you can select images for you items";
 				INFOPLIST_KEY_NSRemindersFullAccessUsageDescription = "KitchenOS needs access to your reminders to add ingredients to your shopping list";
@@ -492,6 +493,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = KitchenOS/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = MealOS;
 				INFOPLIST_KEY_NSCameraUsageDescription = "KichenOS needs access to the camera to scan recipes";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "KitchenOS needs to access your photos so you can select images for you items";
 				INFOPLIST_KEY_NSRemindersFullAccessUsageDescription = "KitchenOS needs access to your reminders to add ingredients to your shopping list";
