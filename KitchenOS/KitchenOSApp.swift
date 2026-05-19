@@ -13,6 +13,8 @@ import CloudKit
 @main
 struct KitchenOSApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    // Use the singleton so AppDelegate's async accept() updates the same instance SwiftUI observes.
+    let sharedPlanService = SharedPlanService.shared
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             Ingredient.self,
@@ -45,18 +47,34 @@ struct KitchenOSApp: App {
             ContentView()
         }
         .modelContainer(sharedModelContainer)
+        .environment(sharedPlanService)
     }
 }
 
 // Handles the "Join shared plan" tap from iMessage / Mail / etc.
 class AppDelegate: NSObject, UIApplicationDelegate {
+
+    // Cold-launch path: app not running when share link is tapped.
     func application(
         _ application: UIApplication,
         userDidAcceptCloudKitShareWith metadata: CKShare.Metadata
     ) {
         Task {
             await CloudKitSharingCoordinator.shared.accept(shareMetadata: metadata)
+            await SharedPlanService.shared.accept(metadata: metadata)
         }
+    }
+
+    // Warm-launch / foreground path: register SceneDelegate so iOS calls
+    // windowScene(_:userDidAcceptCloudKitShareWith:) when the app is already running.
+    func application(
+        _ application: UIApplication,
+        configurationForConnecting session: UISceneSession,
+        options: UIScene.ConnectionOptions
+    ) -> UISceneConfiguration {
+        let config = UISceneConfiguration(name: nil, sessionRole: session.role)
+        config.delegateClass = SceneDelegate.self
+        return config
     }
 }
 

@@ -28,10 +28,10 @@ final class CloudKitSharingCoordinator {
 
     private let container = CKContainer(identifier: "iCloud.com.danielgergely.KitchenOS")
 
-    // The zone SwiftData uses — hard-coded by NSPersistentCloudKitContainer.
-    static let swiftDataZoneName = "com.apple.coredata.cloudkit.zone"
-    static let swiftDataZoneID = CKRecordZone.ID(
-        zoneName: swiftDataZoneName,
+    // Dedicated zone for the collaborative shared plan — separate from SwiftData's zone
+    // so NSPersistentCloudKitContainer never interferes with reads/writes here.
+    static let sharedPlanZoneID = CKRecordZone.ID(
+        zoneName: SharedPlanService.zoneName,
         ownerName: CKCurrentUserDefaultName
     )
 
@@ -70,11 +70,10 @@ final class CloudKitSharingCoordinator {
                     return
                 }
 
-                // Ensure the SwiftData zone exists before attaching a share to it.
-                let zone = CKRecordZone(zoneID: Self.swiftDataZoneID)
+                let zone = CKRecordZone(zoneID: Self.sharedPlanZoneID)
                 _ = try await container.privateCloudDatabase.save(zone)
 
-                let share = CKShare(recordZoneID: Self.swiftDataZoneID)
+                let share = CKShare(recordZoneID: Self.sharedPlanZoneID)
                 share[CKShare.SystemFieldKey.title] = "My Meal Plan" as CKRecordValue
                 // .readWrite lets anyone who receives the URL accept the share.
                 // The link is sent directly to a trusted person, so this is safe.
@@ -142,10 +141,10 @@ final class CloudKitSharingCoordinator {
                 return
             }
 
-            let zone = CKRecordZone(zoneID: Self.swiftDataZoneID)
+            let zone = CKRecordZone(zoneID: Self.sharedPlanZoneID)
             _ = try await container.privateCloudDatabase.save(zone)
 
-            let share = CKShare(recordZoneID: Self.swiftDataZoneID)
+            let share = CKShare(recordZoneID: Self.sharedPlanZoneID)
             share[CKShare.SystemFieldKey.title] = "My Meal Plan" as CKRecordValue
             share.publicPermission = .readWrite
 
@@ -234,20 +233,75 @@ final class CloudKitSharingCoordinator {
         return (try results.saveResults[share.recordID]?.get() as? CKShare) ?? share
     }
 
+    /// Returns the existing CKShare, checking UserDefaults first then scanning the zone
+    /// directly on the server. The zone scan handles reinstalls where UserDefaults was cleared.
     private func fetchPersistedShare() async throws -> CKShare? {
-        guard
-            let data = UserDefaults.standard.data(forKey: shareRecordIDKey),
-            let recordID = try? NSKeyedUnarchiver.unarchivedObject(ofClass: CKRecord.ID.self, from: data)
-        else { return nil }
-
-        // The persisted share might have been deleted on another device — handle gracefully.
-        do {
-            let record = try await container.privateCloudDatabase.record(for: recordID)
-            return record as? CKShare
-        } catch let ckError as CKError where ckError.code == .unknownItem {
-            UserDefaults.standard.removeObject(forKey: shareRecordIDKey)
-            return nil
+        // 1. Fast path: cached record ID in UserDefaults
+        if let data = UserDefaults.standard.data(forKey: shareRecordIDKey),
+           let recordID = try? NSKeyedUnarchiver.unarchivedObject(ofClass: CKRecord.ID.self, from: data) {
+            do {
+                let record = try await container.privateCloudDatabase.record(for: recordID)
+                return record as? CKShare
+            } catch let ckError as CKError where ckError.code == .unknownItem {
+                UserDefaults.standard.removeObject(forKey: shareRecordIDKey)
+            }
         }
+
+        // 2. Slow path: UserDefaults was cleared (reinstall). Scan the private zone for
+        //    the existing CKShare record — zone-level shares live in the zone itself.
+        return try await fetchShareFromZone()
+    }
+
+    /// Fetches the CKShare record from the dedicated shared-plan zone by scanning all
+    /// zone records with a nil server token. Returns nil if the zone doesn't exist yet.
+    private func fetchShareFromZone() async throws -> CKShare? {
+        final class State {
+            var share: CKShare?
+            var nextToken: CKServerChangeToken?
+            var moreComing = false
+        }
+        var serverToken: CKServerChangeToken? = nil
+
+        repeat {
+            let state = State()
+            let config = CKFetchRecordZoneChangesOperation.ZoneConfiguration()
+            config.previousServerChangeToken = serverToken
+
+            let op = CKFetchRecordZoneChangesOperation(
+                recordZoneIDs: [Self.sharedPlanZoneID],
+                configurationsByRecordZoneID: [Self.sharedPlanZoneID: config]
+            )
+
+            op.recordWasChangedBlock = { _, result in
+                if let s = (try? result.get()) as? CKShare { state.share = s }
+            }
+            op.recordZoneFetchResultBlock = { _, result in
+                if case .success(let (token, _, more)) = result {
+                    state.nextToken = token
+                    state.moreComing = more
+                }
+            }
+
+            do {
+                try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
+                    op.fetchRecordZoneChangesResultBlock = { (result: Result<Void, Error>) in
+                        switch result {
+                        case .success:          cont.resume()
+                        case .failure(let err): cont.resume(throwing: err)
+                        }
+                    }
+                    container.privateCloudDatabase.add(op)
+                }
+            } catch let ckError as CKError where ckError.code == .zoneNotFound {
+                return nil  // Zone doesn't exist yet — no share stored
+            }
+
+            if let found = state.share { return found }
+            if !state.moreComing { break }
+            serverToken = state.nextToken
+        } while true
+
+        return nil
     }
 
     private func applyShare(_ share: CKShare) {

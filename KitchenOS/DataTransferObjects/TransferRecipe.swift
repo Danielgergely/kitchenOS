@@ -20,6 +20,20 @@ struct TransferRecipe: Codable {
     let tags: [TransferTag]
     let bookId: UUID?
 
+    init(id: UUID = UUID(), title: String, summary: String, instructions: String, imageData: Data?, typeRawValue: String, prepTime: Int, cookTime: Int, ingredients: [TransferIngredient], tags: [TransferTag], bookId: UUID?) {
+        self.id = id
+        self.title = title
+        self.summary = summary
+        self.instructions = instructions
+        self.imageData = imageData
+        self.typeRawValue = typeRawValue
+        self.prepTime = prepTime
+        self.cookTime = cookTime
+        self.ingredients = ingredients
+        self.tags = tags
+        self.bookId = bookId
+    }
+
     enum CodingKeys: String, CodingKey {
         case id, title, summary, instructions, imageData, typeRawValue, prepTime, cookTime, ingredients, tags, bookId
     }

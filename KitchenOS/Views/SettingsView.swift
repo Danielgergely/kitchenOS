@@ -20,9 +20,6 @@ struct SettingsView: View {
     @State private var showingPreferencesSheet = false
     @State private var showingPasswordAlert = false
     @State private var adminPasswordInput = ""
-    @State private var showingShareSheet = false
-    @State private var showingManageSheet = false
-    @State private var showingStopSharingAlert = false
 
     @AppStorage("remindersListName") private var remindersListName: String = "MealOS"
 
@@ -57,63 +54,6 @@ struct SettingsView: View {
                     }
                 }
                 .onAppear { Task { await sharing.checkAccountStatus() } }
-
-                // --- HOUSEHOLD SHARING SECTION ---
-                Section(
-                    header: Text("Household Sharing"),
-                    footer: Text("Share your meal plan with a partner or family member so you can plan together. Both of you will see and edit the same plan in real time.")
-                ) {
-                    if sharing.currentShare == nil {
-                        Button {
-                            showingShareSheet = true
-                        } label: {
-                            Label("Share with Someone", systemImage: "square.and.arrow.up")
-                        }
-                        .disabled(sharing.iCloudStatus != .available)
-                    } else {
-                        // Show who the share is with
-                        let guests = sharing.participants.filter { $0.role != .owner }
-                        if guests.isEmpty {
-                            Label("Invite pending — no one has joined yet", systemImage: "person.badge.clock")
-                                .foregroundStyle(.secondary)
-                                .font(.subheadline)
-                        } else {
-                            ForEach(guests, id: \.userIdentity.userRecordID?.recordName) { p in
-                                HStack {
-                                    Image(systemName: "person.fill")
-                                        .foregroundStyle(.blue)
-                                    Text(p.userIdentity.nameComponents.map {
-                                        PersonNameComponentsFormatter().string(from: $0)
-                                    } ?? "Guest")
-                                    Spacer()
-                                    Text(p.permission == .readWrite ? "Can Edit" : "View Only")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
-                            }
-                        }
-
-                        Button {
-                            showingManageSheet = true
-                        } label: {
-                            Label("Manage Access & Invite More", systemImage: "person.2.badge.gearshape")
-                        }
-
-                        if sharing.isOwner {
-                            Button(role: .destructive) {
-                                showingStopSharingAlert = true
-                            } label: {
-                                Label("Stop Sharing", systemImage: "xmark.circle")
-                            }
-                        }
-                    }
-
-                    if let msg = sharing.errorMessage {
-                        Text(msg)
-                            .font(.caption)
-                            .foregroundStyle(.red)
-                    }
-                }
 
                 // --- PERSONALIZATION SECTION ---
                 Section(header: Text("Personalization"), footer: Text("Teach MealOS about your tastes to get better AI meal suggestions.")) {
@@ -156,44 +96,12 @@ struct SettingsView: View {
             .navigationTitle("Settings")
             .onAppear {
                 dummyAdminToggle = isAdminMode
-                Task { await sharing.loadOrCreateShare(ifExists: true) }
             }
 
             // MARK: - Sheets & Alerts
 
             .sheet(isPresented: $showingPreferencesSheet) {
                 UserPreferencesSheet()
-            }
-
-            // Invite sheet: our own SwiftUI sheet — creates the CKShare, then shows
-            // a ShareLink so the user can send the URL via Messages, AirDrop, Mail, etc.
-            .sheet(isPresented: $showingShareSheet) {
-                SharePlanSheet(coordinator: sharing) {
-                    showingShareSheet = false
-                }
-            }
-
-            // Manage sheet: UICloudSharingController in management mode — shows participants,
-            // permissions, and lets the owner add more people.
-            .sheet(isPresented: $showingManageSheet) {
-                if let share = sharing.currentShare {
-                    CloudSharingView(
-                        mode: .manage(
-                            share: share,
-                            container: CKContainer(identifier: "iCloud.com.danielgergely.MealOS")
-                        )
-                    )
-                    .ignoresSafeArea()
-                }
-            }
-
-            .alert("Stop Sharing?", isPresented: $showingStopSharingAlert) {
-                Button("Stop Sharing", role: .destructive) {
-                    Task { await sharing.stopSharing() }
-                }
-                Button("Cancel", role: .cancel) {}
-            } message: {
-                Text("This will remove access for everyone you've shared with. Their copy of the plan will no longer update.")
             }
 
             .alert("Admin Access", isPresented: $showingPasswordAlert) {
