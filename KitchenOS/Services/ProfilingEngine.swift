@@ -23,7 +23,7 @@ class ProfilingEngine {
         )
         
         guard let recentDays = try? context.fetch(daysDescriptor) else { return }
-        let recentMeals = recentDays.flatMap { $0.plannedMeals }
+        let recentMeals = recentDays.flatMap { $0.plannedMeals ?? [] }
         
         if recentMeals.isEmpty { return }
         
@@ -47,12 +47,12 @@ class ProfilingEngine {
             foodTypeCounts[recipe.type.rawValue, default: 0] += 1
             
             // Tally Tags
-            for tag in recipe.tags {
+            for tag in recipe.tags ?? [] {
                 tagCounts[tag.name, default: 0] += 1
             }
             
             // Tally Ingredients
-            for ingredient in recipe.ingredients {
+            for ingredient in recipe.ingredients ?? [] {
                 // Normalize ingredient names (e.g., "Tomato" and "tomatoes" -> "tomato")
                 let normalized = ingredient.name.lowercased().trimmingCharacters(in: .whitespaces)
                 ingredientCounts[normalized, default: 0] += 1

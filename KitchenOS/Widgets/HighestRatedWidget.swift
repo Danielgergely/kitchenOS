@@ -61,7 +61,7 @@ struct HighestRatedWidget: View {
                         HStack {
                             Label("\(recipe.prepTime.totalMinutes)m", systemImage: "clock")
                             Spacer()
-                            Label("\(recipe.ingredients.count) items", systemImage: "takeoutbag.and.cup.and.straw")
+                            Label("\(recipe.ingredients?.count ?? 0) items", systemImage: "takeoutbag.and.cup.and.straw")
                         }
                         .font(.caption)
                         .foregroundStyle(.secondary)

@@ -40,7 +40,7 @@ struct RecipeBookDetailView: View {
         // 3. Tag Filter
         if !selectedTags.isEmpty {
             result = result.filter { recipe in
-                let recipeTagIds = recipe.tags.map { $0.id }
+                let recipeTagIds = (recipe.tags ?? []).map { $0.id }
                 return selectedTags.allSatisfy { selectedTag in
                     recipeTagIds.contains(selectedTag.id)
                 }

@@ -23,13 +23,13 @@ struct RecommendationSheet: View {
     private var pastMeals: [PlannedMeal] {
         let thirtyDaysAgo = Calendar.current.date(byAdding: .day, value: -30, to: .now) ?? .distantPast
         return allPlannedMeals.filter {
-            $0.day.date < Date.now && $0.day.date >= thirtyDaysAgo
+            ($0.day?.date ?? .distantFuture) < Date.now && ($0.day?.date ?? .distantFuture) >= thirtyDaysAgo
         }
     }
-    
+
     private var upcomingMeals: [PlannedMeal] {
         return allPlannedMeals.filter {
-            $0.day.date >= Date.now
+            ($0.day?.date ?? .distantPast) >= Date.now
         }
     }
     

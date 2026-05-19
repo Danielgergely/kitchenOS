@@ -27,9 +27,9 @@ enum TagColor: String, Codable, CaseIterable {
 @Model
 final class Tag {
     var id: UUID = UUID()
-    var name: String
-    var color: TagColor
-    var icon: String
+    var name: String = ""
+    var color: TagColor = TagColor.blue
+    var icon: String = ""
     
     var recipes: [Recipe]?
     var ingredients: [Ingredient]?

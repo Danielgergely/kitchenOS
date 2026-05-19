@@ -85,7 +85,7 @@ struct CookModeView: View {
                                     }
                                     .scaleEffect(completedSteps.contains(index) ? 1.1 : 1.0)
                                     
-                                    SmartInstructionText(step: step, ingredients: recipe.ingredients)
+                                    SmartInstructionText(step: step, ingredients: recipe.ingredients ?? [])
                                         .font(.title3)
                                         .lineSpacing(8)
                                         .opacity(completedSteps.contains(index) ? 0.3 : 1.0)
@@ -107,7 +107,7 @@ struct CookModeView: View {
                         .padding(.top, 80)
                         .padding([.horizontal, .bottom])
                     
-                    List(recipe.ingredients) { ingredient in
+                    List(recipe.ingredients ?? []) { ingredient in
                         VStack(alignment: .leading, spacing: 2) {
                             Text(ingredient.name).font(.subheadline.bold())
                             Text("\(ingredient.amount, format: .number) \(ingredient.unit.rawValue)").font(.caption).foregroundColor(.secondary)

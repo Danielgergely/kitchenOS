@@ -348,9 +348,9 @@ struct RecipeEditorSheet: View {
                     selectedType = recipe.type
                     selectedImageData = recipe.image
                     selectedBook = recipe.book
-                    tempTags = recipe.tags
-                    
-                    tempIngredients = recipe.ingredients.map { oldIng in
+                    tempTags = recipe.tags ?? []
+
+                    tempIngredients = (recipe.ingredients ?? []).map { oldIng in
                         Ingredient(
                             id: oldIng.id,
                             name: oldIng.name,
@@ -386,7 +386,7 @@ struct RecipeEditorSheet: View {
             existingRecipe.book = selectedBook
             existingRecipe.tags = tempTags
             
-            existingRecipe.ingredients.forEach{modelContext.delete($0)}
+            existingRecipe.ingredients?.forEach{modelContext.delete($0)}
             existingRecipe.ingredients = tempIngredients
             
         } else {
@@ -424,8 +424,8 @@ struct RecipeEditorSheet: View {
                     self.prepTime = newRecipe.prepTime.prepTime
                     self.cookTime = newRecipe.prepTime.cookingTime
                     self.selectedType = newRecipe.type
-                    self.tempTags = newRecipe.tags
-                    self.tempIngredients = newRecipe.ingredients
+                    self.tempTags = newRecipe.tags ?? []
+                    self.tempIngredients = newRecipe.ingredients ?? []
                     
                     self.isScanning = false
                 }
@@ -456,8 +456,8 @@ struct RecipeEditorSheet: View {
                     self.prepTime = newRecipe.prepTime.prepTime
                     self.cookTime = newRecipe.prepTime.cookingTime
                     self.selectedType = newRecipe.type
-                    self.tempTags = newRecipe.tags
-                    self.tempIngredients = newRecipe.ingredients
+                    self.tempTags = newRecipe.tags ?? []
+                    self.tempIngredients = newRecipe.ingredients ?? []
                     self.selectedImageData = downloadedImageData
                     
                     self.isScanning = false

@@ -9,9 +9,9 @@ import SwiftData
 
 @Model
 class ShoppingItem {
-    var name: String
-    var amount: Double
-    var unit: Unit
+    var name: String = ""
+    var amount: Double = 1.0
+    var unit: Unit = Unit.piece
     var isChecked: Bool = false
     var createdAt: Date = Date()
     var reminderId: String? = nil

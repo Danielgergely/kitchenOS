@@ -25,7 +25,7 @@ struct TodayWidget: View {
                         .foregroundStyle(.secondary)
                 }
                 
-                let todaysMeals = meals.filter { Calendar.current.isDateInToday($0.day.date) }
+                let todaysMeals = meals.filter { Calendar.current.isDateInToday($0.day?.date ?? .distantPast) }
                 
                 // --- Content ---
                 if todaysMeals.isEmpty {
@@ -88,10 +88,10 @@ struct TodayWidget: View {
     private func getLeftoverImage(for meal: PlannedMeal) -> Data? {
         guard meal.cookingType == .leftovers else { return nil }
         
-        let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: meal.day.date) ?? Date()
-        
+        let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: meal.day?.date ?? Date()) ?? Date()
+
         // Find all meals from yesterday
-        let yesterdaysMeals = meals.filter { Calendar.current.isDate($0.day.date, inSameDayAs: yesterday) }
+        let yesterdaysMeals = meals.filter { Calendar.current.isDate($0.day?.date ?? .distantPast, inSameDayAs: yesterday) }
         
         // Try to grab dinner first, otherwise fallback to lunch
         if let dinnerImg = yesterdaysMeals.first(where: { $0.type == .dinner })?.recipe?.image {

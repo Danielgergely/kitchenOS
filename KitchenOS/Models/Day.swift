@@ -9,11 +9,11 @@ import SwiftData
 
 @Model
 final class Day {
-    @Attribute(.unique) var date: Date
+    var date: Date = Date()
     var note: String?
     
     @Relationship(deleteRule: .cascade, inverse: \PlannedMeal.day)
-    var plannedMeals: [PlannedMeal] = []
+    var plannedMeals: [PlannedMeal]? = []
     
     init(date: Date, note: String? = nil) {
         self.date = date
@@ -21,6 +21,6 @@ final class Day {
     }
     
     func meal(for type: MealType) -> PlannedMeal? {
-        return plannedMeals.first { $0.type == type }
+        return plannedMeals?.first { $0.type == type }
     }
 }

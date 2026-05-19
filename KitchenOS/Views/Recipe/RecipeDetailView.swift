@@ -67,10 +67,10 @@ struct RecipeDetailView: View {
                         .foregroundStyle(.blue)
                         .padding(.top, 4)
                         
-                        if !recipe.tags.isEmpty {
+                        if !(recipe.tags ?? []).isEmpty {
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 8) {
-                                    ForEach(recipe.tags) { tag in
+                                    ForEach(recipe.tags ?? []) { tag in
                                         TagPill(tag: tag, isSelected: false)
                                     }
                                 }
@@ -116,7 +116,7 @@ struct RecipeDetailView: View {
 
                                 // The Grid we built earlier
                                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 250), spacing: 16)], spacing: 12) {
-                                    ForEach(recipe.ingredients) { ingredient in
+                                    ForEach(recipe.ingredients ?? []) { ingredient in
                                         ingredientCard(for: ingredient)
                                     }
                                 }
@@ -129,7 +129,7 @@ struct RecipeDetailView: View {
                                 
                                 Spacer()
                                 
-                                Text("\(recipe.ingredients.count) items")
+                                Text("\(recipe.ingredients?.count ?? 0) items")
                                     .font(.subheadline)
                                     .foregroundStyle(.secondary)
                             }
@@ -250,7 +250,7 @@ struct RecipeDetailView: View {
 
     private func addAllToCart() {
         withAnimation(.spring()) {
-            for ingredient in recipe.ingredients {
+            for ingredient in recipe.ingredients ?? [] {
                 let newItem = ShoppingItem(
                     name: ingredient.name,
                     amount: ingredient.amount,

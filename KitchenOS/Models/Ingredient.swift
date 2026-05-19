@@ -64,10 +64,10 @@ enum Category: String, Codable, CaseIterable {
 @Model
 final class Ingredient {
     var id: UUID = UUID()
-    var name: String
-    var amount: Double
-    var unit: Unit
-    var category: Category
+    var name: String = ""
+    var amount: Double = 1.0
+    var unit: Unit = Unit.piece
+    var category: Category = Category.general
     
     var desc: String?
     var icon: String?
@@ -77,8 +77,8 @@ final class Ingredient {
     @Relationship(inverse: \Recipe.ingredients)
     var recipe: Recipe?
     
-    @Relationship(inverse: \Tag.recipes)
-    var tags: [Tag] = []
+    @Relationship(inverse: \Tag.ingredients)
+    var tags: [Tag]? = []
     
     init(id: UUID, name: String, amount: Double = 1, unit: Unit = .piece, category: Category = .food, desc: String? = nil, icon: String? = nil, image: Data? = nil, calories: Int? = nil, tags: [Tag]) {
         self.id = id

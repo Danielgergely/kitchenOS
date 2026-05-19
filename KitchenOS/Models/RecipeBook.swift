@@ -9,11 +9,11 @@ import SwiftData
 
 @Model
 class RecipeBook {
-    var id: UUID
+    var id: UUID = UUID()
     var storefrontId: UUID?
-    var title: String
+    var title: String = ""
     var desc: String?
-    var icon: String
+    var icon: String = "folder"
     @Attribute(.externalStorage) var image: Data?
     
     @Relationship(deleteRule: .cascade, inverse: \Recipe.book)

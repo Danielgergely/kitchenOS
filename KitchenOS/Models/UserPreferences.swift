@@ -41,7 +41,7 @@ final class UserPreferences {
     var favoriteIngredients: [String] = [] // Salad, Potato, Rice
     var foodTypeFrequencies: [String: Int] = [:] // ["Soup": 5, "Main Dish": 23]
 
-    @Attribute(.unique) var id: String = "currentUser"
+    var id: String = "currentUser"
 
     init(
         cookingSkillLevel: SkillLevel = .intermediate,
