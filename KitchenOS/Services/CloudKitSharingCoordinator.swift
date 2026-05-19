@@ -52,10 +52,11 @@ final class CloudKitSharingCoordinator {
     func prepareShare(completion: @escaping (CKShare?, CKContainer, Error?) -> Void) {
         Task {
             do {
-                // Restore existing share first.
+                // Restore existing share first — upgrade permission if it was created with .none.
                 if let existing = try await fetchPersistedShare() {
-                    applyShare(existing)
-                    completion(existing, container, nil)
+                    let upgraded = try await ensureReadWritePermission(existing)
+                    applyShare(upgraded)
+                    completion(upgraded, container, nil)
                     return
                 }
 
@@ -75,7 +76,9 @@ final class CloudKitSharingCoordinator {
 
                 let share = CKShare(recordZoneID: Self.swiftDataZoneID)
                 share[CKShare.SystemFieldKey.title] = "My Meal Plan" as CKRecordValue
-                share.publicPermission = .none
+                // .readWrite lets anyone who receives the URL accept the share.
+                // The link is sent directly to a trusted person, so this is safe.
+                share.publicPermission = .readWrite
 
                 let results = try await container.privateCloudDatabase.modifyRecords(
                     saving: [share], deleting: [])
@@ -132,21 +135,19 @@ final class CloudKitSharingCoordinator {
                 return
             }
 
-            // Restore existing share first.
+            // Restore existing share first — upgrade permission if it was created with .none.
             if let existing = try await fetchPersistedShare() {
-                applyShare(existing)
+                let upgraded = try await ensureReadWritePermission(existing)
+                applyShare(upgraded)
                 return
             }
 
-            // Ensure the SwiftData zone exists on the server before creating a share for it.
-            // If the zone doesn't exist yet (no sync has completed), create it explicitly.
             let zone = CKRecordZone(zoneID: Self.swiftDataZoneID)
             _ = try await container.privateCloudDatabase.save(zone)
 
-            // Create a zone-level share. This makes all records in the zone visible to participants.
             let share = CKShare(recordZoneID: Self.swiftDataZoneID)
             share[CKShare.SystemFieldKey.title] = "My Meal Plan" as CKRecordValue
-            share.publicPermission = .none
+            share.publicPermission = .readWrite
 
             let savedRecords = try await container.privateCloudDatabase.modifyRecords(
                 saving: [share],
@@ -222,6 +223,16 @@ final class CloudKitSharingCoordinator {
     }
 
     // MARK: - Private
+
+    /// If an existing share has publicPermission == .none it will silently reject everyone
+    /// who taps the link ("Item Unavailable"). Upgrade it to .readWrite so any recipient
+    /// of the URL can accept without needing to be pre-approved.
+    private func ensureReadWritePermission(_ share: CKShare) async throws -> CKShare {
+        guard share.publicPermission != .readWrite else { return share }
+        share.publicPermission = .readWrite
+        let results = try await container.privateCloudDatabase.modifyRecords(saving: [share], deleting: [])
+        return (try results.saveResults[share.recordID]?.get() as? CKShare) ?? share
+    }
 
     private func fetchPersistedShare() async throws -> CKShare? {
         guard
