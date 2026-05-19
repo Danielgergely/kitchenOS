@@ -1,32 +1,122 @@
 //
 //  SettingsView.swift
-//  KitchenOS
+//  MealOS
 //
 //  Created by Daniel Gergely on 3/1/26.
 //
 import SwiftUI
 import SwiftData
 import UniformTypeIdentifiers
+import CloudKit
 
 struct SettingsView: View {
     @AppStorage("isAdminMode") private var isAdminMode: Bool = false
     @State private var dummyAdminToggle: Bool = false
-    
+
     @Environment(\.modelContext) private var modelContext
     @Query private var allRecipes: [Recipe]
     @Query private var allBooks: [RecipeBook]
-    
+
     @State private var showingPreferencesSheet = false
     @State private var showingPasswordAlert = false
     @State private var adminPasswordInput = ""
-    
-    @AppStorage("remindersListName") private var remindersListName: String = "KitchenOS"
-    
+    @State private var showingShareSheet = false
+    @State private var showingManageSheet = false
+    @State private var showingStopSharingAlert = false
+
+    @AppStorage("remindersListName") private var remindersListName: String = "MealOS"
+
+    private let sharing: CloudKitSharingCoordinator = .shared
+
     var body: some View {
         NavigationStack {
             Form {
+                // --- ICLOUD ACCOUNT SECTION ---
+                // Note on "Sign in with Apple": not used here because CloudKit IS the identity
+                // system. Your iCloud account (Apple ID) authenticates you automatically —
+                // there's no separate login needed, just like in the Notes or Calendar apps.
+                // What the user controls is whether iCloud sync is active or not.
+                Section(
+                    header: Text("iCloud Account"),
+                    footer: iCloudFooter
+                ) {
+                    HStack {
+                        Label("Status", systemImage: "person.icloud")
+                        Spacer()
+                        iCloudStatusBadge
+                    }
+
+                    if sharing.iCloudStatus == .noAccount || sharing.iCloudStatus == .restricted {
+                        Button {
+                            if let url = URL(string: UIApplication.openSettingsURLString) {
+                                UIApplication.shared.open(url)
+                            }
+                        } label: {
+                            Label("Open Settings to Sign In", systemImage: "arrow.up.right.square")
+                        }
+                    }
+                }
+                .onAppear { Task { await sharing.checkAccountStatus() } }
+
+                // --- HOUSEHOLD SHARING SECTION ---
+                Section(
+                    header: Text("Household Sharing"),
+                    footer: Text("Share your meal plan with a partner or family member so you can plan together. Both of you will see and edit the same plan in real time.")
+                ) {
+                    if sharing.currentShare == nil {
+                        Button {
+                            showingShareSheet = true
+                        } label: {
+                            Label("Share with Someone", systemImage: "square.and.arrow.up")
+                        }
+                        .disabled(sharing.iCloudStatus != .available)
+                    } else {
+                        // Show who the share is with
+                        let guests = sharing.participants.filter { $0.role != .owner }
+                        if guests.isEmpty {
+                            Label("Invite pending — no one has joined yet", systemImage: "person.badge.clock")
+                                .foregroundStyle(.secondary)
+                                .font(.subheadline)
+                        } else {
+                            ForEach(guests, id: \.userIdentity.userRecordID?.recordName) { p in
+                                HStack {
+                                    Image(systemName: "person.fill")
+                                        .foregroundStyle(.blue)
+                                    Text(p.userIdentity.nameComponents.map {
+                                        PersonNameComponentsFormatter().string(from: $0)
+                                    } ?? "Guest")
+                                    Spacer()
+                                    Text(p.permission == .readWrite ? "Can Edit" : "View Only")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                        }
+
+                        Button {
+                            showingManageSheet = true
+                        } label: {
+                            Label("Manage Access & Invite More", systemImage: "person.2.badge.gearshape")
+                        }
+
+                        if sharing.isOwner {
+                            Button(role: .destructive) {
+                                showingStopSharingAlert = true
+                            } label: {
+                                Label("Stop Sharing", systemImage: "xmark.circle")
+                            }
+                        }
+                    }
+
+                    if let msg = sharing.errorMessage {
+                        Text(msg)
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                    }
+                }
+
                 // --- PERSONALIZATION SECTION ---
-                Section(header: Text("Personalization"), footer: Text("Teach KitchenOS about your tastes to get better AI meal suggestions.")) {
+                Section(header: Text("Personalization"), footer: Text("Teach MealOS about your tastes to get better AI meal suggestions.")) {
                     Button {
                         showingPreferencesSheet = true
                     } label: {
@@ -34,7 +124,7 @@ struct SettingsView: View {
                             .foregroundStyle(.primary)
                     }
                 }
-                
+
                 // --- INTEGRATIONS SECTION ---
                 Section(header: Text("Integrations")) {
                     HStack {
@@ -47,29 +137,65 @@ struct SettingsView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-                
-                // --- ADMIN SECTION ---
+
+                // --- DEVELOPER SECTION ---
                 Section(header: Text("Developer")) {
                     Toggle(isOn: $dummyAdminToggle) {
                         Label("Admin Mode", systemImage: "person.badge.key.fill")
                     }
-                    .onChange(of: dummyAdminToggle) { oldValue, newValue in
-                        if newValue == true && isAdminMode == false {
+                    .onChange(of: dummyAdminToggle) { _, newValue in
+                        if newValue && !isAdminMode {
                             showingPasswordAlert = true
                             dummyAdminToggle = false
-                        } else if newValue == false {
+                        } else if !newValue {
                             isAdminMode = false
                         }
                     }
                 }
             }
             .navigationTitle("Settings")
+            .onAppear {
+                dummyAdminToggle = isAdminMode
+                Task { await sharing.loadOrCreateShare(ifExists: true) }
+            }
+
+            // MARK: - Sheets & Alerts
+
             .sheet(isPresented: $showingPreferencesSheet) {
                 UserPreferencesSheet()
             }
-            .onAppear {
-                dummyAdminToggle = isAdminMode
+
+            // Invite sheet: our own SwiftUI sheet — creates the CKShare, then shows
+            // a ShareLink so the user can send the URL via Messages, AirDrop, Mail, etc.
+            .sheet(isPresented: $showingShareSheet) {
+                SharePlanSheet(coordinator: sharing) {
+                    showingShareSheet = false
+                }
             }
+
+            // Manage sheet: UICloudSharingController in management mode — shows participants,
+            // permissions, and lets the owner add more people.
+            .sheet(isPresented: $showingManageSheet) {
+                if let share = sharing.currentShare {
+                    CloudSharingView(
+                        mode: .manage(
+                            share: share,
+                            container: CKContainer(identifier: "iCloud.com.danielgergely.MealOS")
+                        )
+                    )
+                    .ignoresSafeArea()
+                }
+            }
+
+            .alert("Stop Sharing?", isPresented: $showingStopSharingAlert) {
+                Button("Stop Sharing", role: .destructive) {
+                    Task { await sharing.stopSharing() }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This will remove access for everyone you've shared with. Their copy of the plan will no longer update.")
+            }
+
             .alert("Admin Access", isPresented: $showingPasswordAlert) {
                 SecureField("Enter Password", text: $adminPasswordInput)
                 Button("Cancel", role: .cancel) {
@@ -86,6 +212,47 @@ struct SettingsView: View {
             } message: {
                 Text("Please enter the developer password to enable publishing tools.")
             }
+        }
+    }
+
+    // MARK: - Sub-views
+
+    @ViewBuilder
+    private var iCloudStatusBadge: some View {
+        switch sharing.iCloudStatus {
+        case .available:
+            Label("Signed In", systemImage: "checkmark.circle.fill")
+                .foregroundStyle(.green)
+                .labelStyle(.titleAndIcon)
+        case .noAccount:
+            Label("Not Signed In", systemImage: "xmark.circle.fill")
+                .foregroundStyle(.red)
+                .labelStyle(.titleAndIcon)
+        case .restricted:
+            Label("Restricted", systemImage: "exclamationmark.circle.fill")
+                .foregroundStyle(.orange)
+                .labelStyle(.titleAndIcon)
+        case .temporarilyUnavailable:
+            Label("Temporarily Unavailable", systemImage: "clock.badge.exclamationmark")
+                .foregroundStyle(.orange)
+                .labelStyle(.titleAndIcon)
+        default:
+            HStack(spacing: 6) {
+                ProgressView().scaleEffect(0.8)
+                Text("Checking…").foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var iCloudFooter: some View {
+        switch sharing.iCloudStatus {
+        case .available:
+            Text("Your data syncs automatically across all your devices via your Apple ID. To sign out, go to Settings → Apple ID.")
+        case .noAccount:
+            Text("Sign in to iCloud to sync your meal plan across devices and share it with others.")
+        default:
+            Text("MealOS uses your iCloud account (Apple ID) for sync and sharing — no separate login needed.")
         }
     }
 }

@@ -87,24 +87,28 @@ struct MealPlannerSheet: View {
     
     private func savePlan() {
         var targetDay = allDays.first { Calendar.current.isDate($0.date, inSameDayAs: selectedDate) }
-        
+
         if targetDay == nil {
             let newDay = Day(date: Calendar.current.startOfDay(for: selectedDate))
             modelContext.insert(newDay)
             targetDay = newDay
         }
-        
+
         guard let day = targetDay else { return }
-        
-        if let existingMeal = day.plannedMeals.first(where: { $0.type == selectedMealType }) {
+
+        let snapshot = DataExchangeService.snapshotRecipe(recipe)
+
+        if let existingMeal = day.plannedMeals?.first(where: { $0.type == selectedMealType }) {
             existingMeal.recipe = recipe
+            existingMeal.sharedRecipeData = snapshot
             existingMeal.title = nil
             existingMeal.cookingType = .homeCooked
         } else {
             let newMeal = PlannedMeal(type: selectedMealType, day: day, recipe: recipe)
-            day.plannedMeals.append(newMeal)
+            newMeal.sharedRecipeData = snapshot
+            day.plannedMeals?.append(newMeal)
         }
-        
+
         dismiss()
     }
 }

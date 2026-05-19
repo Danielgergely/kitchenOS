@@ -174,20 +174,24 @@ struct WeekPlanView: View {
     }
     
     func assignRecipeToPlan(recipe: Recipe, type: MealType, date: Date) {
+        let snapshot = DataExchangeService.snapshotRecipe(recipe)
         let currentPlan = plan(for: date)
         if let existingPlan = currentPlan {
-            if let existingMeal = existingPlan.plannedMeals.first(where: { $0.type == type }) {
+            if let existingMeal = existingPlan.plannedMeals?.first(where: { $0.type == type }) {
                 existingMeal.recipe = recipe
+                existingMeal.sharedRecipeData = snapshot
                 existingMeal.title = nil
                 existingMeal.cookingType = .homeCooked
             } else {
                 let newMeal = PlannedMeal(type: type, day: existingPlan, recipe: recipe)
-                existingPlan.plannedMeals.append(newMeal)
+                newMeal.sharedRecipeData = snapshot
+                existingPlan.plannedMeals?.append(newMeal)
             }
         } else {
             let newPlan = Day(date: date)
             let newMeal = PlannedMeal(type: type, day: newPlan, recipe: recipe)
-            newPlan.plannedMeals.append(newMeal)
+            newMeal.sharedRecipeData = snapshot
+            newPlan.plannedMeals?.append(newMeal)
             modelContext.insert(newPlan)
         }
     }
@@ -195,7 +199,7 @@ struct WeekPlanView: View {
     func assignCustomMealToPlan(title: String, type: MealType, cookingType: CookingType, date: Date) {
         let currentPlan = plan(for: date)
         if let existingPlan = currentPlan {
-            if let existingMeal = existingPlan.plannedMeals.first(where: { $0.type == type }) {
+            if let existingMeal = existingPlan.plannedMeals?.first(where: { $0.type == type }) {
                 existingMeal.recipe = nil
                 existingMeal.title = title.isEmpty ? cookingType.rawValue : title
                 existingMeal.cookingType = cookingType
@@ -203,14 +207,14 @@ struct WeekPlanView: View {
                 let newMeal = PlannedMeal(type: type, day: existingPlan, recipe: nil)
                 newMeal.title = title.isEmpty ? cookingType.rawValue : title
                 newMeal.cookingType = cookingType
-                existingPlan.plannedMeals.append(newMeal)
+                existingPlan.plannedMeals?.append(newMeal)
             }
         } else {
             let newPlan = Day(date: date)
             let newMeal = PlannedMeal(type: type, day: newPlan, recipe: nil)
             newMeal.title = title.isEmpty ? cookingType.rawValue : title
             newMeal.cookingType = cookingType
-            newPlan.plannedMeals.append(newMeal)
+            newPlan.plannedMeals?.append(newMeal)
             modelContext.insert(newPlan)
         }
     }
@@ -218,17 +222,73 @@ struct WeekPlanView: View {
 
 struct DayColumn: View {
     @Environment(\.modelContext) private var modelContext
-    
+    @Query private var allRecipes: [Recipe]
+
     let date: Date
     let plan: Day?
-    
+
     let getPlan: (Date) -> Day?
-    
+
     @State private var expandedSlots: Set<MealType> = []
-    
+
     let onRecipeTapped: (Recipe) -> Void
     let onNotesTapped: (PlannedMeal) -> Void
     let onPickerTapped: (MealType, Date) -> Void
+
+    // MARK: - Save to Library
+
+    /// Copies the recipe snapshot from a shared plan meal into the user's own library.
+    /// Duplicate detection: if sourceRecipeId already matches an existing recipe, skip save.
+    private func saveToLibrary(meal: PlannedMeal) {
+        guard let data = meal.sharedRecipeData,
+              let transfer = try? JSONDecoder().decode(TransferRecipe.self, from: data)
+        else { return }
+
+        // Prevent duplicate copies
+        let alreadyExists = allRecipes.contains {
+            $0.sourceRecipeId == transfer.id || $0.id == transfer.id
+        }
+        guard !alreadyExists else { return }
+
+        let ingredients = transfer.ingredients.map { tIng in
+            Ingredient(
+                id: UUID(),
+                name: tIng.name,
+                amount: tIng.amount,
+                unit: Unit(rawValue: tIng.unitRawValue) ?? .piece,
+                category: Category(rawValue: tIng.categoryRawValue) ?? .food,
+                desc: tIng.desc,
+                icon: tIng.icon,
+                image: tIng.imageData,
+                calories: tIng.calories,
+                tags: []
+            )
+        }
+
+        let newRecipe = Recipe(
+            title: transfer.title,
+            summary: transfer.summary,
+            instructions: transfer.instructions,
+            image: transfer.imageData,
+            type: FoodType(rawValue: transfer.typeRawValue) ?? .mainDish,
+            prepTime: PreparationTime(prepTime: transfer.prepTime, cookingTime: transfer.cookTime),
+            ingredients: ingredients,
+            tags: []
+        )
+        newRecipe.sourceRecipeId = transfer.id
+        modelContext.insert(newRecipe)
+    }
+
+    /// Returns true when the user already has a copy of the recipe from this meal.
+    private func isAlreadySaved(meal: PlannedMeal) -> Bool {
+        guard let data = meal.sharedRecipeData,
+              let transfer = try? JSONDecoder().decode(TransferRecipe.self, from: data)
+        else { return false }
+
+        return allRecipes.contains {
+            $0.sourceRecipeId == transfer.id || $0.id == transfer.id
+        }
+    }
     
     var body: some View {
         VStack(spacing: 4) {
@@ -319,6 +379,11 @@ struct DayColumn: View {
                         _ = expandedSlots.remove(type)
                     }
                 } : nil,
+                onSaveToLibrary: plannedMeal.flatMap { meal -> (() -> Void)? in
+                    guard meal.sharedRecipeData != nil, !isAlreadySaved(meal: meal) else { return nil }
+                    return { saveToLibrary(meal: meal) }
+                },
+                isAlreadySaved: plannedMeal.map { isAlreadySaved(meal: $0) } ?? false,
                 leftoverImageData: leftoverImage
             )
         }

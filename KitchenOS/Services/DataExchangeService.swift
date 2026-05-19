@@ -9,7 +9,7 @@ import SwiftData
 
 class DataExchangeService {
     
-    static func generateExportFile(from recipes: [Recipe], books: [RecipeBook], filename: String = "KitchenOS_Export.json") -> URL? {
+    static func generateExportFile(from recipes: [Recipe], books: [RecipeBook], filename: String = "MealOS_Export.json") -> URL? {
         // Books
         let transferBooks = books.map { book in
             TransferRecipeBook(
@@ -22,8 +22,8 @@ class DataExchangeService {
         
         // Recipes
         let transferRecipes = recipes.map { recipe in
-            let transferIngredients = recipe.ingredients.map { ing in
-                let ingTags = ing.tags.map { tag in
+            let transferIngredients = (recipe.ingredients ?? []).map { ing in
+                let ingTags = (ing.tags ?? []).map { tag in
                         TransferTag(name: tag.name, icon: tag.icon, colorRawValue: tag.color.rawValue)
                     }
                     
@@ -40,11 +40,12 @@ class DataExchangeService {
                     )
             }
             
-            let transferTags = recipe.tags.map { tag in
+            let transferTags = (recipe.tags ?? []).map { tag in
                 TransferTag(name: tag.name, icon: tag.icon, colorRawValue: tag.color.rawValue)
             }
             
             return TransferRecipe(
+                id: recipe.id,
                 title: recipe.title,
                 summary: recipe.summary,
                 instructions: recipe.instructions,
@@ -78,6 +79,45 @@ class DataExchangeService {
         }
     }
     
+    // Encodes a single recipe into JSON for the PlannedMeal.sharedRecipeData snapshot.
+    // The other household member uses this snapshot to display recipe details
+    // even if they don't have the recipe in their own library.
+    static func snapshotRecipe(_ recipe: Recipe) -> Data? {
+        let transferIngredients = (recipe.ingredients ?? []).map { ing in
+            let ingTags = (ing.tags ?? []).map { tag in
+                TransferTag(name: tag.name, icon: tag.icon, colorRawValue: tag.color.rawValue)
+            }
+            return TransferIngredient(
+                name: ing.name,
+                amount: ing.amount,
+                unitRawValue: ing.unit.rawValue,
+                categoryRawValue: ing.category.rawValue,
+                desc: ing.desc,
+                icon: ing.icon,
+                imageData: ing.image,
+                calories: ing.calories,
+                tags: ingTags
+            )
+        }
+        let transferTags = (recipe.tags ?? []).map { tag in
+            TransferTag(name: tag.name, icon: tag.icon, colorRawValue: tag.color.rawValue)
+        }
+        let transfer = TransferRecipe(
+            id: recipe.id,
+            title: recipe.title,
+            summary: recipe.summary,
+            instructions: recipe.instructions,
+            imageData: recipe.image,
+            typeRawValue: recipe.type.rawValue,
+            prepTime: recipe.prepTime.prepTime,
+            cookTime: recipe.prepTime.cookingTime,
+            ingredients: transferIngredients,
+            tags: transferTags,
+            bookId: recipe.book?.id
+        )
+        return try? JSONEncoder().encode(transfer)
+    }
+
     // 1. Read the file without saving anything yet
     static func peekImportFile(from url: URL) throws -> TransferBackup {
         guard url.startAccessingSecurityScopedResource() else {

@@ -5,20 +5,26 @@
 //  Created by Daniel Gergely on 2/16/26.
 //
 import SwiftUI
+import SwiftData
 
 struct MealSlotView: View {
     let title: String
     let meal: PlannedMeal?
     let expandUp: Bool
-    
+
     var onTap: () -> Void
     var onSwitch: () -> Void
     var onDelete: () -> Void
     var onNotes: () -> Void
     var onCloseEmpty: (() -> Void)? = nil
-    
+    /// Called when the user wants to save this meal's recipe snapshot to their personal library.
+    /// `nil` means the meal has no snapshot, or the recipe is already in the library.
+    var onSaveToLibrary: (() -> Void)? = nil
+    /// True when the recipe is already saved (shows "Owned by Both" badge instead of save button).
+    var isAlreadySaved: Bool = false
+
     var leftoverImageData: Data? = nil
-    
+
     @State private var showingRatingPopover = false
     
     var body: some View {
@@ -127,14 +133,13 @@ struct MealSlotView: View {
             }
         }
         .contextMenu {
-            // Context Menu for Rating the specific meal
             if let meal = meal, meal.recipe != nil || meal.cookingType == .eatingOut {
                 Button {
                     showingRatingPopover = true
                 } label: {
                     Label("Rate Meal...", systemImage: "star")
                 }
-                
+
                 if meal.ratingGiven != nil {
                     Button(role: .destructive) {
                         meal.ratingGiven = nil
@@ -142,6 +147,20 @@ struct MealSlotView: View {
                         Label("Clear Rating", systemImage: "slash.circle")
                     }
                 }
+            }
+
+            // Save a shared recipe to personal library
+            if let save = onSaveToLibrary {
+                Divider()
+                Button {
+                    save()
+                } label: {
+                    Label("Save to My Library", systemImage: "square.and.arrow.down")
+                }
+            } else if isAlreadySaved {
+                Divider()
+                Label("Owned by Both", systemImage: "person.2.checkmark")
+                    .foregroundStyle(.secondary)
             }
         }
         .popover(isPresented: $showingRatingPopover) {
