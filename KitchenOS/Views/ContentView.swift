@@ -48,7 +48,7 @@ struct ContentView: View {
                         }
                     }
                 }
-                .navigationTitle("KitchenOS")
+                .navigationTitle("MealOS")
                 .navigationSplitViewColumnWidth(min: 200, ideal: 250, max: 300)
                 .safeAreaInset(edge: .bottom) {
                     HStack {

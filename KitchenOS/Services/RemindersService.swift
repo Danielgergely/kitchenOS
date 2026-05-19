@@ -27,7 +27,7 @@ class RemindersService: ObservableObject {
         let granted = await requestAccess()
         guard granted else { return }
 
-        let listName = UserDefaults.standard.string(forKey: "remindersListName") ?? "KitchenOS"
+        let listName = UserDefaults.standard.string(forKey: "remindersListName") ?? "MealOS"
 
         do {
             let targetList = try findOrCreateRemindersCalendar(named: listName)

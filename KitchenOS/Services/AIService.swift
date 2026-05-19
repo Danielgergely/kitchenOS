@@ -171,7 +171,7 @@ class AIService {
             
         // 2. Build the Prompt
         let prompt = """
-            You are an expert culinary assistant inside the iPad app KitchenOS. 
+            You are an expert culinary assistant inside the iPad app MealOS.
             Select the THREE BEST recipe from the user's provided catalog that fits their current request and baseline preferences.
             
             USER BASELINE:
