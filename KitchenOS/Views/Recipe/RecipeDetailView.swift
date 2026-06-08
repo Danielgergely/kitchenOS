@@ -18,6 +18,7 @@ struct RecipeDetailView: View {
     @State private var animatingIngredientId: UUID? = nil
     
     @State private var isShowingCookingMode = false
+    @State private var exportFile: ExportFile?
     
     var body: some View {
         ScrollView {
@@ -181,6 +182,15 @@ struct RecipeDetailView: View {
         .ignoresSafeArea(edges: .top)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
+                Button {
+                    if let url = DataExchangeService.exportRecipe(recipe) {
+                        exportFile = ExportFile(url: url)
+                    }
+                } label: {
+                    Image(systemName: "square.and.arrow.up")
+                }
+            }
+            ToolbarItem(placement: .primaryAction) {
                 Button("Edit") {
                     isShowingEditSheet = true
                 }
@@ -190,6 +200,9 @@ struct RecipeDetailView: View {
             RecipeEditorSheet(recipeToEdit: recipe) {
                 dismiss()
             }
+        }
+        .sheet(item: $exportFile) { file in
+            ShareSheet(activityItems: [file.url])
         }
         .fullScreenCover(isPresented: $isShowingCookingMode) {
             CookModeView(recipe: recipe)

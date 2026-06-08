@@ -15,6 +15,7 @@ struct RecipeBookDetailView: View {
     
     @State private var isShowingEditSheet = false
     @State private var isShowingAddRecipeSheet = false
+    @State private var exportFile: ExportFile?
     
     @State private var searchText = ""
     @State private var selectedTags: [Tag] = []
@@ -128,6 +129,15 @@ struct RecipeBookDetailView: View {
         .edgesIgnoringSafeArea(book.image != nil ? .top : [])
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
+                Button {
+                    if let url = DataExchangeService.exportBook(book) {
+                        exportFile = ExportFile(url: url)
+                    }
+                } label: {
+                    Image(systemName: "square.and.arrow.up")
+                }
+            }
+            ToolbarItem(placement: .primaryAction) {
                 Button("Edit") {
                     isShowingEditSheet = true
                 }
@@ -137,6 +147,9 @@ struct RecipeBookDetailView: View {
             RecipeBookEditorSheet(bookToEdit: book) {
                 dismiss()
             }
+        }
+        .sheet(item: $exportFile) { file in
+            ShareSheet(activityItems: [file.url])
         }
         .sheet(isPresented: $isShowingAddRecipeSheet) {
             RecipeEditorSheet(initialBook: book)

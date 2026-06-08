@@ -174,26 +174,56 @@ class DataExchangeService {
             }
         }
         
+        // Existing recipes for de-duplication (by origin id or sourceRecipeId).
+        let existingRecipes = (try? context.fetch(FetchDescriptor<Recipe>())) ?? []
+        var seenIds = Set(existingRecipes.map { $0.id })
+        seenIds.formUnion(existingRecipes.compactMap { $0.sourceRecipeId })
+
         // Translate Recipes
         for transfer in backup.recipes {
-            // Only import recipes if their parent book was successfully imported/overwritten
-            guard let oldBookId = transfer.bookId, let matchingBook = restoredBooks[oldBookId] else {
-                continue
-            }
-            
+            // Skip duplicates unless overwriting.
+            if seenIds.contains(transfer.id) && !overwrite { continue }
+            seenIds.insert(transfer.id)
+
             let ingredients = transfer.ingredients.map { tIng in
                 let ingTags = tIng.tags.map { resolveTag($0) }
                 return Ingredient(id: UUID(), name: tIng.name, amount: tIng.amount, unit: Unit(rawValue: tIng.unitRawValue) ?? .piece, category: Category(rawValue: tIng.categoryRawValue) ?? .food, desc: tIng.desc, icon: tIng.icon, image: tIng.imageData, calories: tIng.calories, tags: ingTags)
             }
             let tags = transfer.tags.map { resolveTag($0) }
-            
+
             let newRecipe = Recipe(title: transfer.title, summary: transfer.summary, instructions: transfer.instructions, image: transfer.imageData, type: FoodType(rawValue: transfer.typeRawValue) ?? .mainDish, prepTime: PreparationTime(prepTime: transfer.prepTime, cookingTime: transfer.cookTime), ingredients: ingredients, tags: tags)
-            
-            newRecipe.book = matchingBook
+
+            // Link to its book if that book came along in this backup; otherwise import
+            // it as a standalone library recipe (covers single-recipe shares).
+            if let oldBookId = transfer.bookId, let matchingBook = restoredBooks[oldBookId] {
+                newRecipe.book = matchingBook
+            }
+            // Track origin so re-importing the same share doesn't create duplicates.
+            newRecipe.sourceRecipeId = transfer.id
             context.insert(newRecipe)
         }
-        
+
         try context.save()
+    }
+
+    // MARK: - Sharing convenience
+
+    /// Builds a shareable JSON file for a single recipe (imported as a standalone recipe).
+    static func exportRecipe(_ recipe: Recipe) -> URL? {
+        generateExportFile(from: [recipe], books: [], filename: "\(safeFilename(recipe.title)).json")
+    }
+
+    /// Builds a shareable JSON file for a whole cookbook and its recipes.
+    static func exportBook(_ book: RecipeBook) -> URL? {
+        generateExportFile(from: book.recipes ?? [], books: [book], filename: "\(safeFilename(book.title)).json")
+    }
+
+    private static func safeFilename(_ name: String) -> String {
+        let cleaned = name
+            .components(separatedBy: CharacterSet(charactersIn: "/\\:?%*|\"<>"))
+            .joined(separator: "-")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return cleaned.isEmpty ? "MealOS_Recipe" : cleaned
     }
 }
 

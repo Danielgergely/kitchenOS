@@ -14,6 +14,7 @@ struct RecipeSquare: View {
     
     @State private var showingRemoveConfirmation = false
     @State private var showingPlanner = false
+    @State private var exportFile: ExportFile?
     
     var body: some View {
         Group {
@@ -112,9 +113,19 @@ struct RecipeSquare: View {
                     } label: {
                         Label("Plan Meal...", systemImage: "calendar.badge.plus")
                     }
+                    Button {
+                        if let url = DataExchangeService.exportRecipe(recipe) {
+                            exportFile = ExportFile(url: url)
+                        }
+                    } label: {
+                        Label("Share Recipe...", systemImage: "square.and.arrow.up")
+                    }
                 }
                 .sheet(isPresented: $showingPlanner) {
                     MealPlannerSheet(recipe: recipe)
+                }
+                .sheet(item: $exportFile) { file in
+                    ShareSheet(activityItems: [file.url])
                 }
                 .confirmationDialog("Remove recipe from Cookbook?", isPresented: $showingRemoveConfirmation, titleVisibility: .visible) {
                     Button("Remove", role: .destructive) {
