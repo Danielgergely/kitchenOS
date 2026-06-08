@@ -11,29 +11,55 @@ import SwiftData
 struct MealPlannerSheet: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
-    
+    @Environment(SharedPlanService.self) private var sharedPlan
+
+    private let coordinator = CloudKitSharingCoordinator.shared
+
     @Query private var allDays: [Day]
-    
+
     let recipe: Recipe
-    
+
     @State private var selectedDate: Date
     @State private var selectedMealType: MealType = .dinner
-    
+    @State private var planSource: PlanSource
+
     init(recipe: Recipe, initialDate: Date? = nil) {
         self.recipe = recipe
         _selectedDate = State(initialValue: initialDate ?? Date())
+        // Default the toggle to the view the user last had active in the week plan.
+        let savedRaw = UserDefaults.standard.string(forKey: "weekPlan.planSource") ?? PlanSource.mine.rawValue
+        _planSource = State(initialValue: PlanSource(rawValue: savedRaw) ?? .mine)
     }
-    
+
+    // True when this device created the share (owner of the shared plan zone).
+    private var isSharedPlanOwner: Bool {
+        coordinator.currentShare != nil && !sharedPlan.hasAcceptedShare
+    }
+    private var isInSharedPlan: Bool { sharedPlan.hasAcceptedShare || isSharedPlanOwner }
+
     var body: some View {
         NavigationStack {
             Form {
+                // Only offer the destination toggle when a shared plan exists.
+                if isInSharedPlan {
+                    Section {
+                        Picker("Plan", selection: $planSource) {
+                            Text("My Plan").tag(PlanSource.mine)
+                            Text("Shared").tag(PlanSource.shared)
+                        }
+                        .pickerStyle(.segmented)
+                    } header: {
+                        Text("Add To")
+                    }
+                }
+
                 Section {
                     MiniWeekPlannerView(selectedDate: $selectedDate, allDays: allDays)
                         .padding(.vertical, 8)
                 } header: {
                     Text("Select Date")
                 }
-                
+
                 Section {
                     Picker("Meal Slot", selection: $selectedMealType) {
                         ForEach(MealType.allCases, id: \.self) { type in
@@ -45,22 +71,25 @@ struct MealPlannerSheet: View {
                     Text("Select Meal")
                 }
                 
-                // Show what is currently planned for the selected slot to prevent blind overwrites
-                Section("Current Plan") {
-                    if let existingMeal = mealForSelectedSlot {
-                        HStack {
-                            Image(systemName: existingMeal.cookingType == .eatingOut ? "takeoutbag.and.cup.and.straw" : "fork.knife")
-                                .foregroundStyle(.secondary)
-                            Text(existingMeal.displayTitle)
-                                .foregroundStyle(.primary)
-                            Spacer()
-                            Text("Will be replaced")
-                                .font(.caption)
-                                .foregroundStyle(.red)
+                // Current-slot preview only applies to the private plan (shared data isn't
+                // loaded here). For the shared plan we add a new entry rather than replace.
+                if planSource == .mine {
+                    Section("Current Plan") {
+                        if let existingMeal = mealForSelectedSlot {
+                            HStack {
+                                Image(systemName: existingMeal.cookingType == .eatingOut ? "takeoutbag.and.cup.and.straw" : "fork.knife")
+                                    .foregroundStyle(.secondary)
+                                Text(existingMeal.displayTitle)
+                                    .foregroundStyle(.primary)
+                                Spacer()
+                                Text("Will be replaced")
+                                    .font(.caption)
+                                    .foregroundStyle(.red)
+                            }
+                        } else {
+                            Text("Slot is available")
+                                .foregroundStyle(.green)
                         }
-                    } else {
-                        Text("Slot is available")
-                            .foregroundStyle(.green)
                     }
                 }
             }
@@ -86,6 +115,24 @@ struct MealPlannerSheet: View {
     }
     
     private func savePlan() {
+        let snapshot = DataExchangeService.snapshotRecipe(recipe)
+
+        // Shared plan → write to CloudKit shared zone instead of SwiftData.
+        if planSource == .shared && isInSharedPlan {
+            let owner = isSharedPlanOwner
+            let date = selectedDate
+            let type = selectedMealType
+            let title = recipe.title
+            Task { await sharedPlan.addMeal(date: date, mealType: type, title: title, notes: "", recipeData: snapshot, isOwner: owner) }
+            dismiss()
+            return
+        }
+
+        savePrivatePlan(snapshot: snapshot)
+        dismiss()
+    }
+
+    private func savePrivatePlan(snapshot: Data?) {
         var targetDay = allDays.first { Calendar.current.isDate($0.date, inSameDayAs: selectedDate) }
 
         if targetDay == nil {
@@ -95,8 +142,6 @@ struct MealPlannerSheet: View {
         }
 
         guard let day = targetDay else { return }
-
-        let snapshot = DataExchangeService.snapshotRecipe(recipe)
 
         if let existingMeal = day.plannedMeals?.first(where: { $0.type == selectedMealType }) {
             existingMeal.recipe = recipe
@@ -108,8 +153,6 @@ struct MealPlannerSheet: View {
             newMeal.sharedRecipeData = snapshot
             day.plannedMeals?.append(newMeal)
         }
-
-        dismiss()
     }
 }
 

@@ -23,9 +23,22 @@ class RemindersService: ObservableObject {
         }
     }
     
-    func exportToReminders(items: [ShoppingItem]) async {
+    enum ExportResult: Equatable {
+        case success(count: Int, listName: String)
+        case empty
+        case accessDenied
+        case failure(String)
+    }
+
+    @discardableResult
+    func exportToReminders(items: [ShoppingItem]) async -> ExportResult {
+        guard !items.isEmpty else { return .empty }
+
         let granted = await requestAccess()
-        guard granted else { return }
+        guard granted else {
+            HapticManager.notification(type: .error)
+            return .accessDenied
+        }
 
         let listName = UserDefaults.standard.string(forKey: "remindersListName") ?? "MealOS"
 
@@ -40,14 +53,17 @@ class RemindersService: ObservableObject {
                 reminder.calendar = targetList
 
                 try store.save(reminder, commit: false)
-                
+
                 item.reminderId = reminder.calendarItemIdentifier
             }
 
             try store.commit()
             HapticManager.notification(type: .success)
+            return .success(count: items.count, listName: listName)
         } catch {
             print("Failed to find/create reminders list: \(error.localizedDescription)")
+            HapticManager.notification(type: .error)
+            return .failure(error.localizedDescription)
         }
     }
     

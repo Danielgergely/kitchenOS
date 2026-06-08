@@ -12,6 +12,8 @@ struct ShoppingOverlayView: View {
     @Query(sort: \ShoppingItem.createdAt) private var items: [ShoppingItem]
     
     @State private var isExpanded = false
+    @State private var exportResult: RemindersService.ExportResult?
+    @State private var showExportAlert = false
     @Namespace private var animation
     
     var body: some View {
@@ -103,7 +105,11 @@ struct ShoppingOverlayView: View {
                 Spacer()
                 
                 Button {
-                    Task { await RemindersService.shared.exportToReminders(items: items) }
+                    Task {
+                        let result = await RemindersService.shared.exportToReminders(items: items)
+                        exportResult = result
+                        showExportAlert = true
+                    }
                 } label: {
                     Label("Export", systemImage: "square.and.arrow.up")
                 }
@@ -116,6 +122,43 @@ struct ShoppingOverlayView: View {
         .clipShape(RoundedRectangle(cornerRadius: 24))
         .shadow(radius: 20)
         .matchedGeometryEffect(id: "cart", in: animation)
+        .alert(exportAlertTitle, isPresented: $showExportAlert) {
+            Button("OK", role: .cancel) {}
+            if exportResult == .accessDenied {
+                Button("Open Settings") {
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(url)
+                    }
+                }
+            }
+        } message: {
+            Text(exportAlertMessage)
+        }
+    }
+
+    private var exportAlertTitle: String {
+        switch exportResult {
+        case .success:      return "Exported"
+        case .empty:        return "Nothing to Export"
+        case .accessDenied: return "Reminders Access Needed"
+        case .failure:      return "Export Failed"
+        case .none:         return ""
+        }
+    }
+
+    private var exportAlertMessage: String {
+        switch exportResult {
+        case .success(let count, let listName):
+            return "Added \(count) item\(count == 1 ? "" : "s") to your \"\(listName)\" list in Reminders."
+        case .empty:
+            return "Your shopping list is empty."
+        case .accessDenied:
+            return "Allow access to Reminders in Settings to export your shopping list."
+        case .failure(let message):
+            return message
+        case .none:
+            return ""
+        }
     }
     
     private func deleteItems(offsets: IndexSet) {

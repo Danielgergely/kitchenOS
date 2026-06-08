@@ -12,6 +12,9 @@ struct ShoppingListView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \ShoppingItem.createdAt, order: .forward) private var items: [ShoppingItem]
     
+    @State private var exportResult: RemindersService.ExportResult?
+    @State private var showExportAlert = false
+
     private var allSelected: Bool {
         !items.isEmpty && items.allSatisfy { $0.isChecked }
     }
@@ -72,8 +75,8 @@ struct ShoppingListView: View {
                         }
                         Button {
                             Task {
-                                await RemindersService.shared.exportToReminders(items: items)
-                                HapticManager.notification(type: .success)
+                                exportResult = await RemindersService.shared.exportToReminders(items: items)
+                                showExportAlert = true
                             }
                         } label: {
                             Label("Export", systemImage: "square.and.arrow.up")
@@ -97,8 +100,46 @@ struct ShoppingListView: View {
                     RemindersService.shared.syncItemsWithReminders(items: items)
                 }
             }
+            .alert(exportAlertTitle, isPresented: $showExportAlert) {
+                Button("OK", role: .cancel) {}
+                if exportResult == .accessDenied {
+                    Button("Open Settings") {
+                        if let url = URL(string: UIApplication.openSettingsURLString) {
+                            UIApplication.shared.open(url)
+                        }
+                    }
+                }
+            } message: {
+                Text(exportAlertMessage)
+            }
         }
     }
+
+    private var exportAlertTitle: String {
+        switch exportResult {
+        case .success:      return "Exported"
+        case .empty:        return "Nothing to Export"
+        case .accessDenied: return "Reminders Access Needed"
+        case .failure:      return "Export Failed"
+        case .none:         return ""
+        }
+    }
+
+    private var exportAlertMessage: String {
+        switch exportResult {
+        case .success(let count, let listName):
+            return "Added \(count) item\(count == 1 ? "" : "s") to your \"\(listName)\" list in Reminders."
+        case .empty:
+            return "Your shopping list is empty."
+        case .accessDenied:
+            return "Allow access to Reminders in Settings to export your shopping list."
+        case .failure(let message):
+            return message
+        case .none:
+            return ""
+        }
+    }
+
     private func toggleSelectAll() {
             let shouldSelect = !allSelected
             withAnimation {

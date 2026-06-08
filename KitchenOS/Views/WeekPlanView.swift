@@ -22,7 +22,7 @@ enum ViewMode: Int, CaseIterable {
     }
 }
 
-enum PlanSource {
+enum PlanSource: String {
     case mine, shared
 }
 
@@ -30,13 +30,20 @@ struct WeekPlanView: View {
     @Environment(\.modelContext) public var modelContext
     @Environment(SharedPlanService.self) private var sharedPlan
     @Query private var days: [Day]
+    @Query private var allRecipes: [Recipe]
 
     let coordinator = CloudKitSharingCoordinator.shared
 
     @State private var baseDate = Date()
     @State private var selectedPage: Int = 0
     @State private var viewMode: ViewMode = .week
-    @State private var planSource: PlanSource = .mine
+
+    // Persisted across launches so the chosen view (My Plan / Shared) sticks.
+    @AppStorage("weekPlan.planSource") private var planSourceRaw: String = PlanSource.mine.rawValue
+    private var planSource: PlanSource {
+        get { PlanSource(rawValue: planSourceRaw) ?? .mine }
+        nonmutating set { planSourceRaw = newValue.rawValue }
+    }
 
     @State private var showSharingSheet = false
 
@@ -52,9 +59,11 @@ struct WeekPlanView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Loading / error feedback for shared plan mode
+            // Loading / error feedback for shared plan mode.
+            // Only show the spinner on a true cold load (no cached meals) — when meals
+            // are already on screen we refresh silently in the background.
             if planSource == .shared && isInSharedPlan {
-                if sharedPlan.isLoading {
+                if sharedPlan.isLoading && sharedPlan.meals.isEmpty {
                     HStack(spacing: 8) {
                         ProgressView().scaleEffect(0.8)
                         Text("Loading shared plan…").font(.caption).foregroundStyle(.secondary)
@@ -163,7 +172,7 @@ struct WeekPlanView: View {
                     // Toggle for participants (accepted share) and owners (created a share).
                     // Owner's plan IS the shared plan, but the toggle lets them confirm what others see.
                     if sharedPlan.hasAcceptedShare || coordinator.currentShare != nil {
-                        Picker("Plan", selection: $planSource) {
+                        Picker("Plan", selection: planSourceBinding) {
                             Text("My Plan").tag(PlanSource.mine)
                             Text("Shared").tag(PlanSource.shared)
                         }
@@ -203,8 +212,8 @@ struct WeekPlanView: View {
             baseDate = headerDate
             selectedPage = 0
         }
-        .onChange(of: planSource) { _, newSource in
-            if newSource == .shared {
+        .onChange(of: planSourceRaw) { _, _ in
+            if planSource == .shared {
                 Task { await sharedPlan.fetchMeals(for: dates(for: selectedPage), isOwner: isSharedPlanOwner) }
             }
         }
@@ -217,8 +226,22 @@ struct WeekPlanView: View {
             if !accepted && !isSharedPlanOwner { planSource = .mine }
         }
         .onAppear {
-            Task { await coordinator.loadOrCreateShare(ifExists: true) }
+            Task {
+                await coordinator.loadOrCreateShare(ifExists: true)
+                // Restore: if a shared view was persisted but no share exists, fall back.
+                if planSource == .shared && !isInSharedPlan {
+                    planSource = .mine
+                } else if planSource == .shared {
+                    // Refresh the persisted shared view in the background.
+                    await sharedPlan.fetchMeals(for: dates(for: selectedPage), isOwner: isSharedPlanOwner)
+                }
+            }
         }
+    }
+
+    // Bridges the persisted raw string to the Picker's PlanSource selection.
+    private var planSourceBinding: Binding<PlanSource> {
+        Binding(get: { planSource }, set: { planSource = $0 })
     }
 
     // True when this device created the share (owner of the shared plan zone).
@@ -236,6 +259,7 @@ struct WeekPlanView: View {
                 date: date,
                 sharedMeals: sharedPlan.meals.filter { Calendar.current.isDate($0.date, inSameDayAs: date) },
                 isOwner: isSharedPlanOwner,
+                onOpenRecipe: { entry in openSharedRecipe(entry) },
                 onPickerTapped: { type, pickerDate in
                     selectedMealTypeForPicker = type
                     selectedDateForPicker = pickerDate
@@ -260,6 +284,49 @@ struct WeekPlanView: View {
 
     func plan(for date: Date) -> Day? {
         return days.first { Calendar.current.isDate($0.date, inSameDayAs: date)}
+    }
+
+    /// Opens a recipe planned in the shared view. Prefers a local copy (so editing/cooking
+    /// mode work); otherwise builds a transient, read-only recipe from the shared snapshot.
+    func openSharedRecipe(_ entry: SharedMealEntry) {
+        guard let data = entry.sharedRecipeData,
+              let transfer = try? JSONDecoder().decode(TransferRecipe.self, from: data) else { return }
+
+        if let local = allRecipes.first(where: { $0.id == transfer.id || $0.sourceRecipeId == transfer.id }) {
+            recipeToNavigate = local
+            return
+        }
+        recipeToNavigate = Self.transientRecipe(from: transfer)
+    }
+
+    /// Builds an in-memory Recipe (not inserted into any context) from a shared snapshot.
+    static func transientRecipe(from transfer: TransferRecipe) -> Recipe {
+        let ingredients = transfer.ingredients.map { tIng in
+            Ingredient(
+                id: UUID(),
+                name: tIng.name,
+                amount: tIng.amount,
+                unit: Unit(rawValue: tIng.unitRawValue) ?? .piece,
+                category: Category(rawValue: tIng.categoryRawValue) ?? .food,
+                desc: tIng.desc,
+                icon: tIng.icon,
+                image: tIng.imageData,
+                calories: tIng.calories,
+                tags: []
+            )
+        }
+        let recipe = Recipe(
+            title: transfer.title,
+            summary: transfer.summary,
+            instructions: transfer.instructions,
+            image: transfer.imageData,
+            type: FoodType(rawValue: transfer.typeRawValue) ?? .mainDish,
+            prepTime: PreparationTime(prepTime: transfer.prepTime, cookingTime: transfer.cookTime),
+            ingredients: ingredients,
+            tags: []
+        )
+        recipe.sourceRecipeId = transfer.id
+        return recipe
     }
 
     var headerDate: Date {
@@ -518,6 +585,7 @@ struct SharedDayColumn: View {
     let date: Date
     let sharedMeals: [SharedMealEntry]
     let isOwner: Bool
+    let onOpenRecipe: (SharedMealEntry) -> Void
     let onPickerTapped: (MealType, Date) -> Void
 
     @State private var expandedSlots: Set<MealType> = []
@@ -580,7 +648,12 @@ struct SharedDayColumn: View {
                 meal: meal,
                 expandUp: expandUp,
                 onTap: {
-                    if meal == nil { onPickerTapped(type, date) }
+                    if let m = meal {
+                        // Open the recipe if this slot has one; custom meals have no snapshot.
+                        if m.sharedRecipeData != nil { onOpenRecipe(m) }
+                    } else {
+                        onPickerTapped(type, date)
+                    }
                 },
                 onDelete: {
                     if let m = meal {
