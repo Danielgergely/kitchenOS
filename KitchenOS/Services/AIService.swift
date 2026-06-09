@@ -117,12 +117,21 @@ class AIService {
                 userInfo: [NSLocalizedDescriptionKey: "Failed to read website content."]
             )
         }
-        
+
+        // Primary path: parse embedded schema.org JSON-LD. Free, instant, on-device,
+        // works without any API call. Most recipe sites provide it.
+        if let structured = RecipeJSONLDExtractor.extract(fromHTML: htmlContent) {
+            print("✅ Extracted recipe from schema.org JSON-LD — no API call needed.")
+            return structured
+        }
+
+        // Fallback: the page has no structured data, so use the LLM.
+        print("ℹ️ No JSON-LD found — falling back to AI extraction.")
         let prompt = getRecipeExtractionAIPrompt(
             extractFromText: "the provided website HTML",
             tagList: tagList
         )
-        
+
         return try await callLLM(prompt: prompt, content: htmlContent)
     }
     
