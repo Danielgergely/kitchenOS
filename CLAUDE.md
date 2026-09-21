@@ -53,7 +53,7 @@ xcodebuild test -scheme KitchenOS -destination 'platform=iOS Simulator,name=iPad
 
 **Services pattern:** All services are `@Observable` singletons accessed via `.shared`. They are injected into the SwiftUI environment in `KitchenOSApp` and consumed with `@Environment(ServiceType.self)`.
 
-**External integrations:** API keys live in `Config.xcconfig` (not checked in to version control) and are surfaced through `ConfigService`/`Secrets`. The app uses Google Gemini via `AIService` (recipe extraction from images/URLs, and library recommendations) and Supabase (recipe store, `RecipeStoreService` + `AdminPublishService`).
+**External integrations:** API keys live in `KitchenOS/Config.xcconfig` (not checked in to version control) and are surfaced through `ConfigService`/`Secrets`. The app uses Google Gemini via `AIService` (recipe extraction from images/URLs, and library recommendations) and Supabase (recipe store, `RecipeStoreService` + `AdminPublishService`).
 
 URL recipe import tries `RecipeJSONLDExtractor` (schema.org JSON-LD, free and on-device) first and only falls back to Gemini when a page has no structured data. `RecipeLanguage` (Settings → Recipe Language) decides the language the model writes the extracted recipe in.
 

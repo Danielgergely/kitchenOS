@@ -74,7 +74,7 @@ struct SharingSheet: View {
             }
         }
         .onAppear {
-            Task { await coordinator.loadOrCreateShare(ifExists: true) }
+            Task { await coordinator.refreshExistingShare() }
         }
     }
 

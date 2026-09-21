@@ -227,7 +227,7 @@ struct WeekPlanView: View {
         }
         .onAppear {
             Task {
-                await coordinator.loadOrCreateShare(ifExists: true)
+                await coordinator.refreshExistingShare()
                 // Restore: if a shared view was persisted but no share exists, fall back.
                 if planSource == .shared && !isInSharedPlan {
                     planSource = .mine
@@ -453,9 +453,6 @@ struct DayColumn: View {
                     } else {
                         onPickerTapped(type, date)
                     }
-                },
-                onSwitch: {
-                    onPickerTapped(type, date)
                 },
                 onDelete: {
                     if let mealToDelete = plannedMeal {

@@ -109,20 +109,7 @@ final class CloudKitSharingCoordinator {
 
     /// Reconnects to a previously created share without creating a new one.
     /// Call on `.onAppear` so the sharing UI reflects an existing share.
-    /// Pass `ifExists: false` to create one when none is stored.
-    func loadOrCreateShare(ifExists: Bool) async {
-        guard ifExists else {
-            isLoading = true
-            errorMessage = nil
-            defer { isLoading = false }
-            do {
-                _ = try await loadOrCreateShare()
-            } catch {
-                errorMessage = Self.friendlyMessage(for: error)
-            }
-            return
-        }
-
+    func refreshExistingShare() async {
         if let existing = try? await fetchPersistedShare() {
             applyShare(existing)
         }

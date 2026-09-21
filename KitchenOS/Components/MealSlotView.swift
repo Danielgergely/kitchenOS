@@ -13,7 +13,6 @@ struct MealSlotView: View {
     let expandUp: Bool
 
     var onTap: () -> Void
-    var onSwitch: () -> Void
     var onDelete: () -> Void
     var onNotes: () -> Void
     var onCloseEmpty: (() -> Void)? = nil
