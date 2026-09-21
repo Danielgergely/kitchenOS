@@ -1,5 +1,5 @@
 //
-//  RecipeLibararyView.swift
+//  RecipeLibraryView.swift
 //  KitchenOS
 //
 //  Created by Daniel Gergely on 2/28/26.

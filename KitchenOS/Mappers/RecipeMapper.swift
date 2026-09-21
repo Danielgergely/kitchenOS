@@ -45,13 +45,14 @@ struct RecipeMapper {
                 let unitString = extIng.unit ?? "piece"
                 
                 let matchedUnit = Unit(rawValue: unitString.lowercased()) ?? .piece
-                
+                let category = IngredientCatalog.category(forKey: IngredientNormalizer.canonicalKey(name)) ?? .food
+
                 return Ingredient(
                     id: UUID(),
                     name: name,
                     amount: amount,
                     unit: matchedUnit,
-                    category: .food,
+                    category: category,
                     tags: []
                 )
             }

@@ -85,7 +85,7 @@ struct ShoppingOverlayView: View {
             List {
                 ForEach(items) { item in
                     HStack {
-                        Text("\(item.amount, specifier: "%.1g") \(item.unit.rawValue) \(item.name)")
+                        Text("\(item.amount, format: .number) \(item.unit.rawValue) \(item.name)")
                         Spacer()
                     }
                     .listRowBackground(Color.clear)
@@ -122,7 +122,7 @@ struct ShoppingOverlayView: View {
         .clipShape(RoundedRectangle(cornerRadius: 24))
         .shadow(radius: 20)
         .matchedGeometryEffect(id: "cart", in: animation)
-        .alert(exportAlertTitle, isPresented: $showExportAlert) {
+        .alert(exportResult?.alertTitle ?? "", isPresented: $showExportAlert) {
             Button("OK", role: .cancel) {}
             if exportResult == .accessDenied {
                 Button("Open Settings") {
@@ -132,34 +132,10 @@ struct ShoppingOverlayView: View {
                 }
             }
         } message: {
-            Text(exportAlertMessage)
+            Text(exportResult?.alertMessage ?? "")
         }
     }
 
-    private var exportAlertTitle: String {
-        switch exportResult {
-        case .success:      return "Exported"
-        case .empty:        return "Nothing to Export"
-        case .accessDenied: return "Reminders Access Needed"
-        case .failure:      return "Export Failed"
-        case .none:         return ""
-        }
-    }
-
-    private var exportAlertMessage: String {
-        switch exportResult {
-        case .success(let count, let listName):
-            return "Added \(count) item\(count == 1 ? "" : "s") to your \"\(listName)\" list in Reminders."
-        case .empty:
-            return "Your shopping list is empty."
-        case .accessDenied:
-            return "Allow access to Reminders in Settings to export your shopping list."
-        case .failure(let message):
-            return message
-        case .none:
-            return ""
-        }
-    }
     
     private func deleteItems(offsets: IndexSet) {
         for index in offsets {

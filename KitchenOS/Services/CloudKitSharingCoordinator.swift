@@ -11,22 +11,24 @@ import SwiftUI
 
 // Manages sharing the household meal plan via CloudKit zone-level sharing.
 //
-// SwiftData's cloudKitDatabase: .automatic writes all records into a zone named
-// "com.apple.coredata.cloudkit.zone". A zone-level CKShare makes every record
-// in that zone accessible to all accepted participants, which is exactly the
-// "one shared plan per household" model we want.
+// The share covers the dedicated zone "KitchenOS.sharedPlan" (see SharedPlanService)
+// — NOT SwiftData's own "com.apple.coredata.cloudkit.zone". Keeping them separate
+// means NSPersistentCloudKitContainer never competes with us over the same records.
+// A zone-level CKShare makes every record in that zone accessible to all accepted
+// participants, which is the "one shared plan per household" model we want.
 //
-// IMPORTANT — two real requirements for sharing to work:
-//   1. The user must be signed into iCloud (Settings → Apple ID)
-//   2. The zone must exist on the CloudKit server, meaning at least one SwiftData
-//      sync must have completed. Open the app, add any recipe or plan item, wait
-//      a moment for the first background sync, then tap Share.
+// The one real requirement: the user must be signed into iCloud (Settings → Apple ID).
+// The zone itself is created on demand when the share is set up.
 @Observable
 final class CloudKitSharingCoordinator {
 
     static let shared = CloudKitSharingCoordinator()
 
-    private let container = CKContainer(identifier: "iCloud.com.danielgergely.KitchenOS")
+    static let containerIdentifier = "iCloud.com.danielgergely.KitchenOS"
+
+    // Lazy so constructing the singleton doesn't create a CKContainer until CloudKit
+    // is actually used (creating one traps when the build lacks iCloud entitlements).
+    @ObservationIgnored private lazy var container = CKContainer(identifier: Self.containerIdentifier)
 
     // Dedicated zone for the collaborative shared plan — separate from SwiftData's zone
     // so NSPersistentCloudKitContainer never interferes with reads/writes here.
@@ -47,50 +49,50 @@ final class CloudKitSharingCoordinator {
 
     // MARK: - Public API
 
-    /// Callback-based share preparation — called by UICloudSharingController's preparationHandler.
-    /// Creates the zone-level CKShare if one doesn't exist yet, or returns the existing one.
+    /// Returns the zone-level CKShare, creating it (and its zone) on first use.
+    /// This is the single share-creation path; the callback variant below wraps it.
+    @discardableResult
+    func loadOrCreateShare() async throws -> CKShare {
+        // Restore an existing share first — upgrade permission if it was created with .none.
+        if let existing = try await fetchPersistedShare() {
+            let upgraded = try await ensureReadWritePermission(existing)
+            applyShare(upgraded)
+            return upgraded
+        }
+
+        let status = try await container.accountStatus()
+        iCloudStatus = status
+        guard status == .available else {
+            throw NSError(domain: "CloudKitSharing", code: 1, userInfo: [
+                NSLocalizedDescriptionKey: "Not signed in to iCloud. Go to Settings → Apple ID."
+            ])
+        }
+
+        let zone = CKRecordZone(zoneID: Self.sharedPlanZoneID)
+        _ = try await container.privateCloudDatabase.save(zone)
+
+        let share = CKShare(recordZoneID: Self.sharedPlanZoneID)
+        share[CKShare.SystemFieldKey.title] = "My Meal Plan" as CKRecordValue
+        // .readWrite lets anyone who receives the URL accept the share.
+        // The link is sent directly to a trusted person, so this is safe.
+        share.publicPermission = .readWrite
+
+        let results = try await container.privateCloudDatabase.modifyRecords(saving: [share], deleting: [])
+        guard let saved = try results.saveResults[share.recordID]?.get() as? CKShare else {
+            throw NSError(domain: "CloudKitSharing", code: 2, userInfo: [
+                NSLocalizedDescriptionKey: "Share record was not returned after save."
+            ])
+        }
+        applyShare(saved)
+        return saved
+    }
+
+    /// Callback-based share preparation — used by SharePlanSheet and
+    /// UICloudSharingController's preparationHandler.
     func prepareShare(completion: @escaping (CKShare?, CKContainer, Error?) -> Void) {
         Task {
             do {
-                // Restore existing share first — upgrade permission if it was created with .none.
-                if let existing = try await fetchPersistedShare() {
-                    let upgraded = try await ensureReadWritePermission(existing)
-                    applyShare(upgraded)
-                    completion(upgraded, container, nil)
-                    return
-                }
-
-                let status = try await container.accountStatus()
-                iCloudStatus = status
-                guard status == .available else {
-                    completion(nil, container,
-                        NSError(domain: "CloudKitSharing", code: 1, userInfo: [
-                            NSLocalizedDescriptionKey: "Not signed in to iCloud. Go to Settings → Apple ID."
-                        ]))
-                    return
-                }
-
-                let zone = CKRecordZone(zoneID: Self.sharedPlanZoneID)
-                _ = try await container.privateCloudDatabase.save(zone)
-
-                let share = CKShare(recordZoneID: Self.sharedPlanZoneID)
-                share[CKShare.SystemFieldKey.title] = "My Meal Plan" as CKRecordValue
-                // .readWrite lets anyone who receives the URL accept the share.
-                // The link is sent directly to a trusted person, so this is safe.
-                share.publicPermission = .readWrite
-
-                let results = try await container.privateCloudDatabase.modifyRecords(
-                    saving: [share], deleting: [])
-
-                if let saved = try results.saveResults[share.recordID]?.get() as? CKShare {
-                    applyShare(saved)
-                    completion(saved, container, nil)
-                } else {
-                    completion(nil, container,
-                        NSError(domain: "CloudKitSharing", code: 2, userInfo: [
-                            NSLocalizedDescriptionKey: "Share record was not returned after save."
-                        ]))
-                }
+                completion(try await loadOrCreateShare(), container, nil)
             } catch {
                 completion(nil, container, error)
             }
@@ -105,64 +107,26 @@ final class CloudKitSharingCoordinator {
         }
     }
 
-    /// Reconnects to a previously created share (from UserDefaults) without creating a new one.
-    /// Call on `.onAppear` so the Manage button appears if a share already exists.
+    /// Reconnects to a previously created share without creating a new one.
+    /// Call on `.onAppear` so the sharing UI reflects an existing share.
+    /// Pass `ifExists: false` to create one when none is stored.
     func loadOrCreateShare(ifExists: Bool) async {
-        guard ifExists else { await loadOrCreateShare(); return }
-        do {
-            if let existing = try await fetchPersistedShare() {
-                applyShare(existing)
+        guard ifExists else {
+            isLoading = true
+            errorMessage = nil
+            defer { isLoading = false }
+            do {
+                _ = try await loadOrCreateShare()
+            } catch {
+                errorMessage = Self.friendlyMessage(for: error)
             }
-            iCloudStatus = (try? await container.accountStatus()) ?? .couldNotDetermine
-        } catch {
-            // Silently ignore — no share was stored.
+            return
         }
-    }
 
-    /// Creates or retrieves the zone-level CKShare. Call before presenting the share sheet.
-    func loadOrCreateShare() async {
-        isLoading = true
-        errorMessage = nil
-        defer { isLoading = false }
-
-        do {
-            // Guard: iCloud must be signed in.
-            let status = try await container.accountStatus()
-            iCloudStatus = status
-            guard status == .available else {
-                errorMessage = "Sign in to iCloud in Settings → Apple ID, then try again."
-                return
-            }
-
-            // Restore existing share first — upgrade permission if it was created with .none.
-            if let existing = try await fetchPersistedShare() {
-                let upgraded = try await ensureReadWritePermission(existing)
-                applyShare(upgraded)
-                return
-            }
-
-            let zone = CKRecordZone(zoneID: Self.sharedPlanZoneID)
-            _ = try await container.privateCloudDatabase.save(zone)
-
-            let share = CKShare(recordZoneID: Self.sharedPlanZoneID)
-            share[CKShare.SystemFieldKey.title] = "My Meal Plan" as CKRecordValue
-            share.publicPermission = .readWrite
-
-            let savedRecords = try await container.privateCloudDatabase.modifyRecords(
-                saving: [share],
-                deleting: []
-            )
-
-            if let savedShare = try savedRecords.saveResults[share.recordID]?.get() as? CKShare {
-                applyShare(savedShare)
-            } else {
-                throw NSError(domain: "CloudKitSharing", code: 2,
-                    userInfo: [NSLocalizedDescriptionKey: "Share record was not returned after save."])
-            }
-
-        } catch {
-            errorMessage = friendlyMessage(for: error)
+        if let existing = try? await fetchPersistedShare() {
+            applyShare(existing)
         }
+        iCloudStatus = (try? await container.accountStatus()) ?? .couldNotDetermine
     }
 
     /// Reload participant list and share URL from CloudKit.
@@ -173,7 +137,7 @@ final class CloudKitSharingCoordinator {
                 applyShare(refreshed)
             }
         } catch {
-            errorMessage = friendlyMessage(for: error)
+            errorMessage = Self.friendlyMessage(for: error)
         }
     }
 
@@ -190,7 +154,7 @@ final class CloudKitSharingCoordinator {
             participants = []
             isOwner = true
         } catch {
-            errorMessage = friendlyMessage(for: error)
+            errorMessage = Self.friendlyMessage(for: error)
         }
     }
 
@@ -203,17 +167,28 @@ final class CloudKitSharingCoordinator {
                 applyShare(saved)
             }
         } catch {
-            errorMessage = friendlyMessage(for: error)
+            errorMessage = Self.friendlyMessage(for: error)
         }
     }
 
     /// Called from AppDelegate when the user taps an iMessage/Mail share link.
     func accept(shareMetadata: CKShare.Metadata) async {
         do {
-            try await container.accept(shareMetadata)
+            _ = try await container.accept(shareMetadata)
         } catch {
-            errorMessage = friendlyMessage(for: error)
+            errorMessage = Self.friendlyMessage(for: error)
         }
+    }
+
+    /// True when this device created the share, i.e. it owns the shared-plan zone.
+    /// (A device that accepted someone else's share is never the owner.)
+    var ownsSharedPlan: Bool {
+        currentShare != nil && !SharedPlanService.shared.hasAcceptedShare
+    }
+
+    /// True when the user takes part in a shared plan, from either side.
+    var isInSharedPlan: Bool {
+        SharedPlanService.shared.hasAcceptedShare || ownsSharedPlan
     }
 
     var canEdit: Bool {
@@ -315,7 +290,9 @@ final class CloudKitSharingCoordinator {
         }
     }
 
-    private func friendlyMessage(for error: Error) -> String {
+    /// Turns a CloudKit error into something a person can act on.
+    /// Shared with the share sheet so both surfaces say the same thing.
+    static func friendlyMessage(for error: Error) -> String {
         if let ckError = error as? CKError {
             switch ckError.code {
             case .notAuthenticated:

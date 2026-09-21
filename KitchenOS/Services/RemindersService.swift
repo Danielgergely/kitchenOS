@@ -28,6 +28,29 @@ class RemindersService: ObservableObject {
         case empty
         case accessDenied
         case failure(String)
+
+        /// Alert copy lives with the result so every screen that exports says the same thing.
+        var alertTitle: String {
+            switch self {
+            case .success:      return "Exported"
+            case .empty:        return "Nothing to Export"
+            case .accessDenied: return "Reminders Access Needed"
+            case .failure:      return "Export Failed"
+            }
+        }
+
+        var alertMessage: String {
+            switch self {
+            case .success(let count, let listName):
+                return "Added \(count) item\(count == 1 ? "" : "s") to your \"\(listName)\" list in Reminders."
+            case .empty:
+                return "Your shopping list is empty."
+            case .accessDenied:
+                return "Allow access to Reminders in Settings to export your shopping list."
+            case .failure(let message):
+                return message
+            }
+        }
     }
 
     @discardableResult

@@ -53,7 +53,7 @@ struct SharingSheet: View {
                     CloudSharingView(
                         mode: .manage(
                             share: share,
-                            container: CKContainer(identifier: "iCloud.com.danielgergely.KitchenOS")
+                            container: CKContainer(identifier: CloudKitSharingCoordinator.containerIdentifier)
                         )
                     ) {
                         Task { await coordinator.refreshShare() }

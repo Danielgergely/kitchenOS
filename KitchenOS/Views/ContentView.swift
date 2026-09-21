@@ -89,7 +89,7 @@ struct ContentView: View {
                         ContentUnavailableView("Pantry", systemImage: "cabinet", description: Text("Coming soon"))
                     }
                 } else {
-                    Text("Plese select an item from the sidebar")
+                    Text("Please select an item from the sidebar")
                 }
             }
             if selectedItem == .recipes {

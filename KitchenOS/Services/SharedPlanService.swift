@@ -39,7 +39,9 @@ final class SharedPlanService {
 
     static let zoneName = "KitchenOS.sharedPlan"
     private static let acceptedKey = "sharedPlan.hasAccepted"
-    private let ck = CKContainer(identifier: "iCloud.com.danielgergely.KitchenOS")
+    // Lazy so merely constructing the singleton (e.g. at app launch or in tests)
+    // doesn't create a CKContainer — that traps when the build lacks iCloud entitlements.
+    @ObservationIgnored private lazy var ck = CKContainer(identifier: CloudKitSharingCoordinator.containerIdentifier)
 
     private(set) var meals: [SharedMealEntry] = []
     private(set) var isLoading = false
@@ -52,7 +54,7 @@ final class SharedPlanService {
 
     func accept(metadata: CKShare.Metadata) async {
         do {
-            try await ck.accept(metadata)
+            _ = try await ck.accept(metadata)
             UserDefaults.standard.set(true, forKey: Self.acceptedKey)
             hasAcceptedShare = true
             if let components = metadata.ownerIdentity.nameComponents {
@@ -72,9 +74,8 @@ final class SharedPlanService {
         error = nil
 
         let weekStart = Calendar.current.startOfDay(for: first)
-        let weekEnd   = Calendar.current.startOfDay(
-            for: Calendar.current.date(byAdding: .day, value: 1, to: last)!
-        )
+        let dayAfterLast = Calendar.current.date(byAdding: .day, value: 1, to: last) ?? last
+        let weekEnd = Calendar.current.startOfDay(for: dayAfterLast)
 
         do {
             let database = isOwner ? ck.privateCloudDatabase : ck.sharedCloudDatabase

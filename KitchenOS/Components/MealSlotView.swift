@@ -109,27 +109,13 @@ struct MealSlotView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 10))
                 .onTapGesture { onTap() }
                 
-                // 2. THE DELETE BUTTON (Only shows if a meal exists)
-                if meal != nil {
-                    Button(action: onDelete) {
-                        Image(systemName: "trash")
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundStyle(.red)
-                            .frame(width: 28, height: 28)
-                    }
-                    .padding(4)
-                    
-                } else if let onCloseEmpty = onCloseEmpty {
-                    Button(action: onCloseEmpty) {
-                        Image(systemName: expandUp ? "chevron.down" : "chevron.up")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundStyle(.secondary)
-                            .padding(6)
-                            .background(.ultraThinMaterial)
-                            .clipShape(Circle())
-                    }
-                    .padding(6)
-                }
+                // 2. DELETE (filled slot) or COLLAPSE (expanded-but-empty slot)
+                SlotCornerButton(
+                    hasMeal: meal != nil,
+                    expandUp: expandUp,
+                    onDelete: onDelete,
+                    onCloseEmpty: onCloseEmpty
+                )
             }
         }
         .contextMenu {

@@ -31,11 +31,8 @@ struct MealPlannerSheet: View {
         _planSource = State(initialValue: PlanSource(rawValue: savedRaw) ?? .mine)
     }
 
-    // True when this device created the share (owner of the shared plan zone).
-    private var isSharedPlanOwner: Bool {
-        coordinator.currentShare != nil && !sharedPlan.hasAcceptedShare
-    }
-    private var isInSharedPlan: Bool { sharedPlan.hasAcceptedShare || isSharedPlanOwner }
+    private var isSharedPlanOwner: Bool { coordinator.ownsSharedPlan }
+    private var isInSharedPlan: Bool { coordinator.isInSharedPlan }
 
     var body: some View {
         NavigationStack {

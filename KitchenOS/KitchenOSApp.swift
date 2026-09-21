@@ -26,20 +26,38 @@ struct KitchenOSApp: App {
             Day.self,
             UserPreferences.self,
         ])
-        let config = ModelConfiguration(
-            schema: schema,
-            isStoredInMemoryOnly: false,
-            cloudKitDatabase: .automatic
-        )
-        do {
-            let container = try ModelContainer(for: schema, configurations: [config])
-            #if DEBUG
-            initializeCloudKitSchemaIfNeeded(container: container)
-            #endif
-            return container
-        } catch {
-            fatalError("Could not create ModelContainer: \(error)")
+        // Skip CloudKit while running tests — the test host has no iCloud account,
+        // and creating a CloudKit-backed store there crashes before tests can run.
+        let env = ProcessInfo.processInfo.environment
+        let isTesting = env["XCTestConfigurationFilePath"] != nil
+            || env["XCTestBundlePath"] != nil
+            || NSClassFromString("XCTestCase") != nil
+
+        if !isTesting {
+            let cloudConfig = ModelConfiguration(
+                schema: schema,
+                isStoredInMemoryOnly: false,
+                cloudKitDatabase: .automatic
+            )
+            if let container = try? ModelContainer(for: schema, configurations: [cloudConfig]) {
+                return container
+            }
         }
+
+        // Fallback: a local store with no CloudKit. Keeps the app usable when iCloud
+        // is unavailable (signed-out users, restricted devices) instead of crashing.
+        let localConfig = ModelConfiguration(
+            schema: schema,
+            isStoredInMemoryOnly: isTesting,
+            cloudKitDatabase: .none
+        )
+        if let container = try? ModelContainer(for: schema, configurations: [localConfig]) {
+            return container
+        }
+
+        // Last resort: in-memory, so the app always launches.
+        let memoryConfig = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
+        return try! ModelContainer(for: schema, configurations: [memoryConfig])
     }()
 
     var body: some Scene {
@@ -77,19 +95,3 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         return config
     }
 }
-
-// Run once in debug to push the CloudKit schema to Apple's servers.
-// After running, go to: CloudKit Dashboard → Development → Deploy Schema to Production
-// This block does nothing in release builds.
-#if DEBUG
-private func initializeCloudKitSchemaIfNeeded(container: ModelContainer) {
-    guard let storeURL = container.configurations.first?.url else { return }
-    let desc = NSPersistentStoreDescription(url: storeURL)
-    desc.cloudKitContainerOptions = NSPersistentCloudKitContainerOptions(
-        containerIdentifier: "iCloud.com.danielgergely.KitchenOS"
-    )
-    let coreDataContainer = NSPersistentCloudKitContainer(name: "KitchenOS")
-    coreDataContainer.persistentStoreDescriptions = [desc]
-    try? coreDataContainer.initializeCloudKitSchema(options: [])
-}
-#endif

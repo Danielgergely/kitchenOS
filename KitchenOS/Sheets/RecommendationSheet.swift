@@ -11,14 +11,12 @@ struct RecommendationSheet: View {
     @Environment(\.dismiss) private var dismiss
     
     @Query(filter: #Predicate<UserPreferences> { $0.id == "currentUser" }) private var prefQuery: [UserPreferences]
-    @Query private var plannedMeals: [PlannedMeal]
     @Query private var allRecipes: [Recipe]
-    
+    @Query private var allPlannedMeals: [PlannedMeal]
+
     var prefilledDate: Date? = nil
     var prefilledMealType: MealType? = nil
     var onAccept: ((Recipe) -> Void)? = nil
-    
-    @Query private var allPlannedMeals: [PlannedMeal]
 
     private var pastMeals: [PlannedMeal] {
         let thirtyDaysAgo = Calendar.current.date(byAdding: .day, value: -30, to: .now) ?? .distantPast
@@ -36,10 +34,10 @@ struct RecommendationSheet: View {
     @State private var context: RecommendationContext
     
     @State private var isGenerating = false
-    @State private var recommendedRecipe: Recipe?
-    @State private var recommendationReason: String = ""
     @State private var errorMessage: String?
-    @State private var showingPlanner = false
+    /// The suggestion whose "Plan this Meal" was tapped. Driving the sheet off the
+    /// recipe (instead of a shared Bool) is what keeps the right one being presented.
+    @State private var recipeToPlan: Recipe?
 
     init(prefilledDate: Date? = nil, prefilledMealType: MealType? = nil, onAccept: ((Recipe) -> Void)? = nil) {
         self.prefilledDate = prefilledDate
@@ -74,6 +72,9 @@ struct RecommendationSheet: View {
                         Text(error).foregroundStyle(.red)
                     }
                 }
+            }
+            .sheet(item: $recipeToPlan) { recipe in
+                MealPlannerSheet(recipe: recipe, initialDate: prefilledDate)
             }
             .navigationTitle("AI Assistant")
             .navigationBarTitleDisplayMode(.inline)
@@ -150,40 +151,6 @@ struct RecommendationSheet: View {
         .listRowBackground(Color.clear)
     }
     
-    private func resultSection(recipe: Recipe) -> some View {
-        Section("Chef's Suggestion") {
-            VStack(alignment: .leading, spacing: 12) {
-                Text(recommendationReason)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .italic()
-                
-                RecipeSquare(recipe: recipe)
-                    .frame(height: 180)
-            }
-            .padding(.vertical, 8)
-            .listRowBackground(Color.clear)
-            .listRowInsets(EdgeInsets())
-            
-            Button {
-                if let onAccept {
-                    onAccept(recipe)
-                } else {
-                    showingPlanner = true
-                }
-            } label: {
-                Text(onAccept != nil ? "Accept Suggestion" : "Plan this Meal")
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.borderedProminent)
-            .listRowBackground(Color.clear)
-            .listRowInsets(EdgeInsets(top: 16, leading: 0, bottom: 0, trailing: 0))
-        }
-        .sheet(isPresented: $showingPlanner) {
-            MealPlannerSheet(recipe: recipe, initialDate: prefilledDate)
-        }
-    }
-    
     private func resultSection(recipe: Recipe, reason: String, index: Int) -> some View {
         Section("Chef's Suggestion #\(index)") {
             VStack(alignment: .leading, spacing: 12) {
@@ -203,7 +170,7 @@ struct RecommendationSheet: View {
                 if let onAccept {
                     onAccept(recipe)
                 } else {
-                    showingPlanner = true
+                    recipeToPlan = recipe
                 }
             } label: {
                 Text(onAccept != nil ? "Accept Suggestion" : "Plan this Meal")
@@ -212,9 +179,6 @@ struct RecommendationSheet: View {
             .buttonStyle(.borderedProminent)
             .listRowBackground(Color.clear)
             .listRowInsets(EdgeInsets(top: 16, leading: 0, bottom: 0, trailing: 0))
-        }
-        .sheet(isPresented: $showingPlanner) {
-            MealPlannerSheet(recipe: recipe, initialDate: prefilledDate)
         }
     }
     
@@ -226,7 +190,6 @@ struct RecommendationSheet: View {
     
     private func generate() {
         isGenerating = true
-        recommendedRecipe = nil
         errorMessage = nil
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
         

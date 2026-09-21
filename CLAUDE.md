@@ -37,19 +37,25 @@ xcodebuild test -scheme KitchenOS -destination 'platform=iOS Simulator,name=iPad
 
 **Stack:** SwiftUI + SwiftData + CloudKit, targeting iPadOS. The app is called MealOS in user-facing copy but KitchenOS in code/bundle ID.
 
-**Navigation:** `ContentView` hosts a `TabView` with 6 tabs: Dashboard, Week Plan, Recipes, Shopping List, Recipe Store, Pantry.
+**Navigation:** `ContentView` hosts a `NavigationSplitView` whose sidebar lists 6 destinations: Dashboard, Week Plan, Recipes, Shopping List, Recipe Store, Pantry.
 
 **Persistence:** SwiftData with `cloudKitDatabase: .automatic` syncs 8 `@Model` types to the private CloudKit database automatically. The iCloud container is `iCloud.com.danielgergely.KitchenOS`. SwiftData's automatic sync only mirrors the *private* database.
 
 **Shared meal plan:** A separate CloudKit layer (not SwiftData) handles household sharing:
-- `CloudKitSharingCoordinator` (singleton) manages the zone-level `CKShare` for the SwiftData zone (`com.apple.coredata.cloudkit.zone`). The owner creates the share; participants accept via a URL.
+- `CloudKitSharingCoordinator` (singleton) manages the zone-level `CKShare` for the dedicated `KitchenOS.sharedPlan` zone — *not* SwiftData's `com.apple.coredata.cloudkit.zone`. The owner creates the share; participants accept via a URL. `ownsSharedPlan` / `isInSharedPlan` on the coordinator are the single source of truth for which side the device is on.
 - `SharedPlanService` (singleton, `@Observable`) reads/writes to `sharedCloudDatabase` directly via CloudKit API — this data never touches SwiftData. It uses `CKFetchRecordZoneChangesOperation` (not `CKQuery`) to avoid needing queryable-field indices in production.
 - NSPersistentCloudKitContainer stores records with a `CD_` prefix: entity `PlannedMeal` → record type `CD_PlannedMeal`, field `notes` → CloudKit key `CD_notes`.
 - `WeekPlanView` toggles between `PlanSource.mine` (SwiftData `DayColumn`) and `PlanSource.shared` (`SharedDayColumn` backed by `SharedPlanService`). The toggle appears for both owners (`coordinator.currentShare != nil`) and participants (`sharedPlan.hasAcceptedShare`).
 
+**Model ↔ DTO mapping:** `Mappers/RecipeTransfer.swift` is the only place that converts between `Recipe`/`Ingredient`/`Tag` and their `Transfer*` Codable counterparts. Export, shared-plan snapshots, import, opening a shared recipe, and saving one to the library all go through it — don't hand-roll the mapping again.
+
+**Actor isolation:** the project builds with `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor` (Swift 5 mode), so unannotated types are main-actor isolated. Pure computation that shouldn't block the UI (e.g. `RecipeJSONLDExtractor`) is marked `nonisolated` *and* dispatched via `Task.detached` — `nonisolated` alone still runs on the caller's executor.
+
 **Services pattern:** All services are `@Observable` singletons accessed via `.shared`. They are injected into the SwiftUI environment in `KitchenOSApp` and consumed with `@Environment(ServiceType.self)`.
 
-**External integrations:** API keys live in `Config.xcconfig` (not checked in to version control) and are surfaced through `ConfigService`. The app uses Google APIs (recipe extraction), Supabase (recipe store), and Claude AI (`AIService`).
+**External integrations:** API keys live in `Config.xcconfig` (not checked in to version control) and are surfaced through `ConfigService`/`Secrets`. The app uses Google Gemini via `AIService` (recipe extraction from images/URLs, and library recommendations) and Supabase (recipe store, `RecipeStoreService` + `AdminPublishService`).
+
+URL recipe import tries `RecipeJSONLDExtractor` (schema.org JSON-LD, free and on-device) first and only falls back to Gemini when a page has no structured data. `RecipeLanguage` (Settings → Recipe Language) decides the language the model writes the extracted recipe in.
 
 ## SourceKit False Positives
 

@@ -6,7 +6,10 @@
 //
 import Foundation
 
-struct PreparationTime: Codable, Sendable {
+// `nonisolated` because the file's default actor isolation (MainActor) would
+// otherwise isolate the Codable conformance, which SwiftData encodes off the main
+// actor — a warning today, an error under the Swift 6 language mode.
+nonisolated struct PreparationTime: Codable, Sendable {
     var prepTime: Int
     var cookingTime: Int
     

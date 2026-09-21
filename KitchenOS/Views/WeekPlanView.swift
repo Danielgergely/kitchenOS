@@ -171,7 +171,7 @@ struct WeekPlanView: View {
 
                     // Toggle for participants (accepted share) and owners (created a share).
                     // Owner's plan IS the shared plan, but the toggle lets them confirm what others see.
-                    if sharedPlan.hasAcceptedShare || coordinator.currentShare != nil {
+                    if isInSharedPlan {
                         Picker("Plan", selection: planSourceBinding) {
                             Text("My Plan").tag(PlanSource.mine)
                             Text("Shared").tag(PlanSource.shared)
@@ -190,7 +190,7 @@ struct WeekPlanView: View {
                     Button {
                         showSharingSheet = true
                     } label: {
-                        Image(systemName: (sharedPlan.hasAcceptedShare || coordinator.currentShare != nil) ? "person.2.fill" : "person.2")
+                        Image(systemName: isInSharedPlan ? "person.2.fill" : "person.2")
                             .foregroundStyle(planSource == .shared ? .blue : .primary)
                     }
                     Button(action: { moveTime(by: -1) } ) {
@@ -244,13 +244,9 @@ struct WeekPlanView: View {
         Binding(get: { planSource }, set: { planSource = $0 })
     }
 
-    // True when this device created the share (owner of the shared plan zone).
-    var isSharedPlanOwner: Bool {
-        coordinator.currentShare != nil && !sharedPlan.hasAcceptedShare
-    }
-
-    // True when the current user participates in a shared plan (either side).
-    var isInSharedPlan: Bool { sharedPlan.hasAcceptedShare || isSharedPlanOwner }
+    // Ownership lives on the coordinator so the week plan and the meal planner agree.
+    var isSharedPlanOwner: Bool { coordinator.ownsSharedPlan }
+    var isInSharedPlan: Bool { coordinator.isInSharedPlan }
 
     @ViewBuilder
     func columnView(for date: Date) -> some View {
@@ -289,44 +285,14 @@ struct WeekPlanView: View {
     /// Opens a recipe planned in the shared view. Prefers a local copy (so editing/cooking
     /// mode work); otherwise builds a transient, read-only recipe from the shared snapshot.
     func openSharedRecipe(_ entry: SharedMealEntry) {
-        guard let data = entry.sharedRecipeData,
-              let transfer = try? JSONDecoder().decode(TransferRecipe.self, from: data) else { return }
+        guard let transfer = TransferRecipe.decode(from: entry.sharedRecipeData) else { return }
 
         if let local = allRecipes.first(where: { $0.id == transfer.id || $0.sourceRecipeId == transfer.id }) {
             recipeToNavigate = local
             return
         }
-        recipeToNavigate = Self.transientRecipe(from: transfer)
-    }
-
-    /// Builds an in-memory Recipe (not inserted into any context) from a shared snapshot.
-    static func transientRecipe(from transfer: TransferRecipe) -> Recipe {
-        let ingredients = transfer.ingredients.map { tIng in
-            Ingredient(
-                id: UUID(),
-                name: tIng.name,
-                amount: tIng.amount,
-                unit: Unit(rawValue: tIng.unitRawValue) ?? .piece,
-                category: Category(rawValue: tIng.categoryRawValue) ?? .food,
-                desc: tIng.desc,
-                icon: tIng.icon,
-                image: tIng.imageData,
-                calories: tIng.calories,
-                tags: []
-            )
-        }
-        let recipe = Recipe(
-            title: transfer.title,
-            summary: transfer.summary,
-            instructions: transfer.instructions,
-            image: transfer.imageData,
-            type: FoodType(rawValue: transfer.typeRawValue) ?? .mainDish,
-            prepTime: PreparationTime(prepTime: transfer.prepTime, cookingTime: transfer.cookTime),
-            ingredients: ingredients,
-            tags: []
-        )
-        recipe.sourceRecipeId = transfer.id
-        return recipe
+        // No local copy — show a transient, read-only recipe built from the snapshot.
+        recipeToNavigate = transfer.makeRecipe()
     }
 
     var headerDate: Date {
@@ -427,68 +393,26 @@ struct DayColumn: View {
     /// Copies the recipe snapshot from a shared plan meal into the user's own library.
     /// Duplicate detection: if sourceRecipeId already matches an existing recipe, skip save.
     private func saveToLibrary(meal: PlannedMeal) {
-        guard let data = meal.sharedRecipeData,
-              let transfer = try? JSONDecoder().decode(TransferRecipe.self, from: data)
+        guard let transfer = TransferRecipe.decode(from: meal.sharedRecipeData),
+              !hasLocalCopy(of: transfer)
         else { return }
 
-        // Prevent duplicate copies
-        let alreadyExists = allRecipes.contains {
-            $0.sourceRecipeId == transfer.id || $0.id == transfer.id
-        }
-        guard !alreadyExists else { return }
-
-        let ingredients = transfer.ingredients.map { tIng in
-            Ingredient(
-                id: UUID(),
-                name: tIng.name,
-                amount: tIng.amount,
-                unit: Unit(rawValue: tIng.unitRawValue) ?? .piece,
-                category: Category(rawValue: tIng.categoryRawValue) ?? .food,
-                desc: tIng.desc,
-                icon: tIng.icon,
-                image: tIng.imageData,
-                calories: tIng.calories,
-                tags: []
-            )
-        }
-
-        let newRecipe = Recipe(
-            title: transfer.title,
-            summary: transfer.summary,
-            instructions: transfer.instructions,
-            image: transfer.imageData,
-            type: FoodType(rawValue: transfer.typeRawValue) ?? .mainDish,
-            prepTime: PreparationTime(prepTime: transfer.prepTime, cookingTime: transfer.cookTime),
-            ingredients: ingredients,
-            tags: []
-        )
-        newRecipe.sourceRecipeId = transfer.id
-        modelContext.insert(newRecipe)
+        modelContext.insert(transfer.makeRecipe())
     }
 
     /// Returns true when the user already has a copy of the recipe from this meal.
     private func isAlreadySaved(meal: PlannedMeal) -> Bool {
-        guard let data = meal.sharedRecipeData,
-              let transfer = try? JSONDecoder().decode(TransferRecipe.self, from: data)
-        else { return false }
+        guard let transfer = TransferRecipe.decode(from: meal.sharedRecipeData) else { return false }
+        return hasLocalCopy(of: transfer)
+    }
 
-        return allRecipes.contains {
-            $0.sourceRecipeId == transfer.id || $0.id == transfer.id
-        }
+    private func hasLocalCopy(of transfer: TransferRecipe) -> Bool {
+        allRecipes.contains { $0.sourceRecipeId == transfer.id || $0.id == transfer.id }
     }
 
     var body: some View {
         VStack(spacing: 4) {
-            VStack {
-                Text(date.formatted("EEE"))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Text(date.formatted("d"))
-                    .font(.title3)
-                    .fontWeight(.bold)
-                    .foregroundStyle(Calendar.current.isDateInToday(date) ? .blue : .primary)
-            }
-            .padding(.bottom, 8)
+            DayColumnHeader(date: date)
 
             slot(for: .breakfast, isCollapsible: true)
             slot(for: .lunch)
@@ -515,23 +439,8 @@ struct DayColumn: View {
         }()
 
         if isCollapsible && !hasMeal && !isExpanded {
-            Button {
-                withAnimation(.spring()) { _ = expandedSlots.insert(type) }
-            } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: "plus")
-                    Text(type.rawValue.capitalized)
-                }
-                .font(.caption)
-                .fontWeight(.bold)
-                .foregroundStyle(.tertiary)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
-                .background(
-                    RoundedRectangle(cornerRadius: 10)
-                        .strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [4]))
-                        .foregroundStyle(.tertiary.opacity(0.5))
-                )
+            CollapsedSlotButton(type: type) {
+                _ = withAnimation(.spring()) { expandedSlots.insert(type) }
             }
         } else {
             MealSlotView(
@@ -592,16 +501,7 @@ struct SharedDayColumn: View {
 
     var body: some View {
         VStack(spacing: 4) {
-            VStack {
-                Text(date.formatted("EEE"))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Text(date.formatted("d"))
-                    .font(.title3)
-                    .fontWeight(.bold)
-                    .foregroundStyle(Calendar.current.isDateInToday(date) ? .blue : .primary)
-            }
-            .padding(.bottom, 8)
+            DayColumnHeader(date: date)
 
             sharedSlot(for: .breakfast, isCollapsible: true)
             sharedSlot(for: .lunch)
@@ -624,23 +524,8 @@ struct SharedDayColumn: View {
         let isExpanded = expandedSlots.contains(type)
 
         if isCollapsible && !hasMeal && !isExpanded {
-            Button {
-                withAnimation(.spring()) { _ = expandedSlots.insert(type) }
-            } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: "plus")
-                    Text(type.rawValue.capitalized)
-                }
-                .font(.caption)
-                .fontWeight(.bold)
-                .foregroundStyle(.tertiary)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
-                .background(
-                    RoundedRectangle(cornerRadius: 10)
-                        .strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [4]))
-                        .foregroundStyle(.tertiary.opacity(0.5))
-                )
+            CollapsedSlotButton(type: type) {
+                _ = withAnimation(.spring()) { expandedSlots.insert(type) }
             }
         } else {
             SharedMealSlotView(
@@ -664,7 +549,7 @@ struct SharedDayColumn: View {
                     }
                 },
                 onCloseEmpty: isCollapsible ? {
-                    withAnimation(.spring()) { _ = expandedSlots.remove(type) }
+                    _ = withAnimation(.spring()) { expandedSlots.remove(type) }
                 } : nil
             )
         }
@@ -736,26 +621,12 @@ struct SharedMealSlotView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 10))
                 .onTapGesture { onTap() }
 
-                // Trash button when meal exists
-                if meal != nil {
-                    Button(action: onDelete) {
-                        Image(systemName: "trash")
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundStyle(.red)
-                            .frame(width: 28, height: 28)
-                    }
-                    .padding(4)
-                } else if let onCloseEmpty {
-                    Button(action: onCloseEmpty) {
-                        Image(systemName: expandUp ? "chevron.down" : "chevron.up")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundStyle(.secondary)
-                            .padding(6)
-                            .background(.ultraThinMaterial)
-                            .clipShape(Circle())
-                    }
-                    .padding(6)
-                }
+                SlotCornerButton(
+                    hasMeal: meal != nil,
+                    expandUp: expandUp,
+                    onDelete: onDelete,
+                    onCloseEmpty: onCloseEmpty
+                )
             }
         }
     }

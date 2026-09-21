@@ -22,6 +22,7 @@ struct SettingsView: View {
     @State private var adminPasswordInput = ""
 
     @AppStorage("remindersListName") private var remindersListName: String = "MealOS"
+    @AppStorage(RecipeLanguage.storageKey) private var recipeLanguageRaw: String = RecipeLanguage.automatic.rawValue
 
     private let sharing: CloudKitSharingCoordinator = .shared
 
@@ -62,6 +63,20 @@ struct SettingsView: View {
                     } label: {
                         Label("Taste Profile & Preferences", systemImage: "person.crop.circle.badge.questionmark")
                             .foregroundStyle(.primary)
+                    }
+                }
+
+                // --- RECIPE EXTRACTION SECTION ---
+                Section(
+                    header: Text("Recipe Language"),
+                    footer: Text("Recipes extracted from a URL or image are translated into this language so the whole recipe stays consistent.")
+                ) {
+                    Picker(selection: $recipeLanguageRaw) {
+                        ForEach(RecipeLanguage.allCases) { lang in
+                            Text(lang.displayName).tag(lang.rawValue)
+                        }
+                    } label: {
+                        Label("Extraction Language", systemImage: "character.bubble")
                     }
                 }
 

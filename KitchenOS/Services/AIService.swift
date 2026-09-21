@@ -20,9 +20,15 @@ class AIService {
     ]
     
     func getRecipeExtractionAIPrompt(extractFromText: String, tagList: String) -> String {
+        let language = RecipeLanguage.current.resolvedLanguageName
         return """
         You are a recipe extraction assistant.
-        Extract the recipe from \(extractFromText). 
+        Extract the recipe from \(extractFromText).
+
+        LANGUAGE: Output ALL text — title, summary, instructions, and every ingredient
+        name — in \(language). If the source recipe is written in another language,
+        translate it into \(language). Be consistent: never mix languages within the result.
+
         Return a JSON object with the following keys:
         - title (String)
         - summary (String, a short 1-2 sentence description)
@@ -120,7 +126,12 @@ class AIService {
 
         // Primary path: parse embedded schema.org JSON-LD. Free, instant, on-device,
         // works without any API call. Most recipe sites provide it.
-        if let structured = RecipeJSONLDExtractor.extract(fromHTML: htmlContent) {
+        // Detached so regexing a whole page never blocks the main actor.
+        let structuredResult = await Task.detached(priority: .userInitiated) {
+            RecipeJSONLDExtractor.extract(fromHTML: htmlContent)
+        }.value
+
+        if let structured = structuredResult {
             print("✅ Extracted recipe from schema.org JSON-LD — no API call needed.")
             return structured
         }

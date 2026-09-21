@@ -1,5 +1,5 @@
 //
-//  AddRecipeSheet.swift
+//  RecipeEditorSheet.swift
 //  KitchenOS
 //
 //  Created by Daniel Gergely on 2/17/26.
@@ -350,6 +350,9 @@ struct RecipeEditorSheet: View {
                     selectedBook = recipe.book
                     tempTags = recipe.tags ?? []
 
+                    // Copies, so edits only land on the real recipe when Save is tapped.
+                    // Keep each ingredient's tags — rebuilding with `tags: []` used to
+                    // wipe them on every save.
                     tempIngredients = (recipe.ingredients ?? []).map { oldIng in
                         Ingredient(
                             id: oldIng.id,
@@ -357,7 +360,11 @@ struct RecipeEditorSheet: View {
                             amount: oldIng.amount,
                             unit: oldIng.unit,
                             category: oldIng.category,
-                            tags: []
+                            desc: oldIng.desc,
+                            icon: oldIng.icon,
+                            image: oldIng.image,
+                            calories: oldIng.calories,
+                            tags: oldIng.tags ?? []
                         )
                     }
                 } else if let book = initialBook {
@@ -407,67 +414,52 @@ struct RecipeEditorSheet: View {
     }
     
     func processImageWithAI(_ image: UIImage) {
+        scan { try await AIService.shared.extractRecipeFromImage(from: image, availableTags: $0) }
+    }
+
+    func extractFromURLWithAI(url: URL) {
+        scan(downloadsCoverImage: true) { try await AIService.shared.extractRecipeFromURL(from: url, availableTags: $0) }
+    }
+
+    /// Shared plumbing for both AI import paths: flip the spinner, run the extractor,
+    /// optionally fetch the cover image it found, then fill the form.
+    private func scan(
+        downloadsCoverImage: Bool = false,
+        using extract: @escaping ([String]) async throws -> ExtractedRecipe
+    ) {
         isScanning = true
-        
         let tagNames = allTags.map { $0.name }
-        
+
         Task {
+            defer { isScanning = false }
             do {
-                let extracted = try await AIService.shared.extractRecipeFromImage(from: image, availableTags: tagNames)
-                
-                // Push the data back to the Main Thread so the UI updates
-                await MainActor.run {
-                    let newRecipe = RecipeMapper.extractedRecipeToRecipe(extracted, availableTags: allTags)
-                    self.title = newRecipe.title
-                    self.summary = newRecipe.summary
-                    self.instructions = newRecipe.instructions
-                    self.prepTime = newRecipe.prepTime.prepTime
-                    self.cookTime = newRecipe.prepTime.cookingTime
-                    self.selectedType = newRecipe.type
-                    self.tempTags = newRecipe.tags ?? []
-                    self.tempIngredients = newRecipe.ingredients ?? []
-                    
-                    self.isScanning = false
+                let extracted = try await extract(tagNames)
+
+                var coverImageData: Data?
+                if downloadsCoverImage,
+                   let urlString = extracted.imageUrl,
+                   let imageUrl = URL(string: urlString) {
+                    coverImageData = await WebService.downloadImage(from: imageUrl)
                 }
-                
+
+                apply(RecipeMapper.extractedRecipeToRecipe(extracted, availableTags: allTags),
+                      coverImageData: coverImageData)
             } catch {
                 print("AI Extraction Failed: \(error.localizedDescription)")
-                await MainActor.run { isScanning = false }
             }
         }
     }
-    func extractFromURLWithAI(url: URL) {
-        isScanning = true
-        let tagNames = allTags.map { $0.name }
-        Task {
-            do {
-                let extracted = try await AIService.shared.extractRecipeFromURL(from: url, availableTags: tagNames)
-                
-                var downloadedImageData: Data? = nil
-                if let urlString = extracted.imageUrl, let imageUrl = URL(string: urlString) {
-                    downloadedImageData = await WebService.downloadImage(from: imageUrl)
-                }
-                                
-                await MainActor.run {
-                    let newRecipe = RecipeMapper.extractedRecipeToRecipe(extracted, availableTags: allTags)
-                    self.title = newRecipe.title
-                    self.summary = newRecipe.summary
-                    self.instructions = newRecipe.instructions
-                    self.prepTime = newRecipe.prepTime.prepTime
-                    self.cookTime = newRecipe.prepTime.cookingTime
-                    self.selectedType = newRecipe.type
-                    self.tempTags = newRecipe.tags ?? []
-                    self.tempIngredients = newRecipe.ingredients ?? []
-                    self.selectedImageData = downloadedImageData
-                    
-                    self.isScanning = false
-                }
-                
-            } catch {
-                print("AI Extraction Failed: \(error.localizedDescription)")
-                await MainActor.run { self.isScanning = false }
-            }
-        }
+
+    private func apply(_ draft: DraftRecipe, coverImageData: Data?) {
+        title = draft.title
+        summary = draft.summary
+        instructions = draft.instructions
+        prepTime = draft.prepTime.prepTime
+        cookTime = draft.prepTime.cookingTime
+        selectedType = draft.type
+        tempTags = draft.tags
+        tempIngredients = draft.ingredients
+        if let coverImageData { selectedImageData = coverImageData }
     }
     
     func deleteRecipe() {

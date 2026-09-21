@@ -14,7 +14,9 @@
 
 import Foundation
 
-enum RecipeJSONLDExtractor {
+// `nonisolated`: parsing a whole HTML page with regexes is pure computation and
+// must not run on the main actor, which the file's default isolation would impose.
+nonisolated enum RecipeJSONLDExtractor {
 
     /// Returns a populated ExtractedRecipe if the HTML contains usable schema.org
     /// Recipe JSON-LD, otherwise nil (caller should fall back to the LLM).
@@ -59,13 +61,12 @@ enum RecipeJSONLDExtractor {
         let summary = (node["description"] as? String).map(cleanText)
         let instructions = instructionsText(from: node["recipeInstructions"])
 
-        var prepTime = minutes(fromISO: node["prepTime"] as? String)
+        let prepTime = minutes(fromISO: node["prepTime"] as? String)
         var cookTime = minutes(fromISO: node["cookTime"] as? String)
         // Fall back to totalTime if the page only lists a combined duration.
         if prepTime == nil && cookTime == nil {
             cookTime = minutes(fromISO: node["totalTime"] as? String)
         }
-        _ = prepTime  // (kept explicit for readability of the prep/cook split)
 
         let ingredients = ingredientStrings(from: node["recipeIngredient"]).map(parseIngredient)
         let image = imageURL(from: node["image"])

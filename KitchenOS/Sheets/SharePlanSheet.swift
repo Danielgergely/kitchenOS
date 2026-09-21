@@ -182,7 +182,7 @@ struct SharePlanSheet: View {
             coordinator.prepareShare { share, _, error in
                 DispatchQueue.main.async {
                     if let error {
-                        phase = .error(friendlyError(error))
+                        phase = .error(CloudKitSharingCoordinator.friendlyMessage(for: error))
                     } else if let url = share?.url {
                         phase = .ready(url)
                     } else {
@@ -192,23 +192,5 @@ struct SharePlanSheet: View {
                 }
             }
         }
-    }
-
-    private func friendlyError(_ error: Error) -> String {
-        if let ck = error as? CKError {
-            switch ck.code {
-            case .notAuthenticated:
-                return "You're not signed in to iCloud. Go to Settings → Apple ID to sign in, then try again."
-            case .networkUnavailable, .networkFailure:
-                return "No internet connection. Connect to Wi-Fi or mobile data and try again."
-            case .serverRejectedRequest:
-                return "iCloud isn't ready yet. Make sure you have at least one recipe or meal in the app, wait a moment for the first sync, then try again."
-            case .quotaExceeded:
-                return "Your iCloud storage is full. Free up space in Settings → Apple ID → iCloud, then try again."
-            default:
-                break
-            }
-        }
-        return error.localizedDescription
     }
 }

@@ -264,25 +264,25 @@ struct RecipeDetailView: View {
     private func addAllToCart() {
         withAnimation(.spring()) {
             for ingredient in recipe.ingredients ?? [] {
-                let newItem = ShoppingItem(
+                ShoppingListAggregator.add(
                     name: ingredient.name,
                     amount: ingredient.amount,
-                    unit: ingredient.unit
+                    unit: ingredient.unit,
+                    to: modelContext
                 )
-                modelContext.insert(newItem)
             }
             HapticManager.impact(style: .light)
         }
     }
-    
+
     private func addToCart(_ ingredient: Ingredient) {
-        let newItem = ShoppingItem(
+        ShoppingListAggregator.add(
             name: ingredient.name,
             amount: ingredient.amount,
-            unit: ingredient.unit
+            unit: ingredient.unit,
+            to: modelContext
         )
-        modelContext.insert(newItem)
-        
+
         withAnimation(.spring()) {
             animatingIngredientId = ingredient.id
         }
