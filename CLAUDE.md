@@ -27,11 +27,22 @@ The `ExportOptions.plist` at the project root is configured for `app-store-conne
 
 ## Tests
 
-Both test targets (`KitchenOSTests`, `KitchenOSUITests`) are template stubs — no meaningful tests exist yet.
+`KitchenOSTests` holds the smart-ingredient suite (normalization, unit/density
+conversion, shopping-list aggregation). `KitchenOSUITests` is still a template stub.
 
 ```bash
-xcodebuild test -scheme KitchenOS -destination 'platform=iOS Simulator,name=iPad Pro 13-inch (M4)'
+xcodebuild test -scheme KitchenOS -destination 'platform=iOS Simulator,name=iPad Pro 13-inch (M5)' -only-testing:KitchenOSTests
 ```
+
+Pick a device that exists for the installed runtime — `xcrun simctl list devices available`.
+
+**CloudKit in the simulator:** simulator builds are signed without entitlements, and
+`CKContainer(identifier:)` *traps* (doesn't throw) when the iCloud entitlement is
+missing, which used to kill the app on launch and take the unit tests with it —
+they run in the app as host. `CloudKitAvailability` gates container creation on
+`targetEnvironment(simulator)`, so sharing no-ops there. Device builds always have
+the entitlement, so `isAvailable` is unconditionally true and CloudKit behaves
+exactly as before. Set `KITCHENOS_ENABLE_CLOUDKIT=1` in the scheme to opt back in.
 
 ## Architecture
 

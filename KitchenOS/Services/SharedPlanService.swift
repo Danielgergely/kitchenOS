@@ -39,9 +39,9 @@ final class SharedPlanService {
 
     static let zoneName = "KitchenOS.sharedPlan"
     private static let acceptedKey = "sharedPlan.hasAccepted"
-    // Lazy so merely constructing the singleton (e.g. at app launch or in tests)
-    // doesn't create a CKContainer — that traps when the build lacks iCloud entitlements.
-    @ObservationIgnored private lazy var ck = CKContainer(identifier: CloudKitSharingCoordinator.containerIdentifier)
+    // nil when the build has no iCloud entitlement (see CloudKitAvailability);
+    // every method below no-ops in that case rather than trapping.
+    @ObservationIgnored private let ck = CloudKitAvailability.container
 
     private(set) var meals: [SharedMealEntry] = []
     private(set) var isLoading = false
@@ -53,6 +53,7 @@ final class SharedPlanService {
     // MARK: - Acceptance
 
     func accept(metadata: CKShare.Metadata) async {
+        guard let ck else { return }
         do {
             _ = try await ck.accept(metadata)
             UserDefaults.standard.set(true, forKey: Self.acceptedKey)
@@ -68,7 +69,8 @@ final class SharedPlanService {
     // MARK: - Fetch
 
     func fetchMeals(for weekDates: [Date], isOwner: Bool) async {
-        guard (hasAcceptedShare || isOwner), let first = weekDates.first, let last = weekDates.last else { return }
+        guard let ck, hasAcceptedShare || isOwner,
+              let first = weekDates.first, let last = weekDates.last else { return }
         isLoading = true
         defer { isLoading = false }
         error = nil
@@ -123,6 +125,7 @@ final class SharedPlanService {
     // MARK: - Write
 
     func addMeal(date: Date, mealType: MealType, title: String?, notes: String, recipeData: Data?, isOwner: Bool) async {
+        guard let ck else { error = CloudKitAvailability.unavailableMessage; return }
         do {
             let zoneID   = try await resolveZoneID(isOwner: isOwner)
             let database = isOwner ? ck.privateCloudDatabase : ck.sharedCloudDatabase
@@ -153,6 +156,7 @@ final class SharedPlanService {
     }
 
     func deleteMeal(id: String, isOwner: Bool) async {
+        guard let ck else { error = CloudKitAvailability.unavailableMessage; return }
         do {
             let zoneID   = try await resolveZoneID(isOwner: isOwner)
             let database = isOwner ? ck.privateCloudDatabase : ck.sharedCloudDatabase
@@ -175,6 +179,11 @@ final class SharedPlanService {
 
     private func resolveZoneID(isOwner: Bool) async throws -> CKRecordZone.ID {
         if let id = sharedZoneID { return id }
+        guard let ck else {
+            throw NSError(domain: "SharedPlan", code: 2, userInfo: [
+                NSLocalizedDescriptionKey: CloudKitAvailability.unavailableMessage
+            ])
+        }
         let database = isOwner ? ck.privateCloudDatabase : ck.sharedCloudDatabase
         let zones = try await database.allRecordZones()
         guard let zone = zones.first(where: { $0.zoneID.zoneName == Self.zoneName }) else {

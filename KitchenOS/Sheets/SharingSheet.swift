@@ -49,12 +49,9 @@ struct SharingSheet: View {
                 }
             }
             .sheet(isPresented: $showManageAccessSheet) {
-                if let share = coordinator.currentShare {
+                if let share = coordinator.currentShare, let container = CloudKitAvailability.container {
                     CloudSharingView(
-                        mode: .manage(
-                            share: share,
-                            container: CKContainer(identifier: CloudKitSharingCoordinator.containerIdentifier)
-                        )
+                        mode: .manage(share: share, container: container)
                     ) {
                         Task { await coordinator.refreshShare() }
                     }

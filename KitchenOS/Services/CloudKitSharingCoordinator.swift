@@ -24,11 +24,11 @@ final class CloudKitSharingCoordinator {
 
     static let shared = CloudKitSharingCoordinator()
 
-    static let containerIdentifier = "iCloud.com.danielgergely.KitchenOS"
+    static let containerIdentifier = CloudKitAvailability.containerIdentifier
 
-    // Lazy so constructing the singleton doesn't create a CKContainer until CloudKit
-    // is actually used (creating one traps when the build lacks iCloud entitlements).
-    @ObservationIgnored private lazy var container = CKContainer(identifier: Self.containerIdentifier)
+    // nil when the build has no iCloud entitlement (see CloudKitAvailability).
+    // Every entry point below no-ops in that case rather than trapping.
+    @ObservationIgnored private let container = CloudKitAvailability.container
 
     // Dedicated zone for the collaborative shared plan — separate from SwiftData's zone
     // so NSPersistentCloudKitContainer never interferes with reads/writes here.
@@ -53,6 +53,12 @@ final class CloudKitSharingCoordinator {
     /// This is the single share-creation path; the callback variant below wraps it.
     @discardableResult
     func loadOrCreateShare() async throws -> CKShare {
+        guard let container else {
+            throw NSError(domain: "CloudKitSharing", code: 3, userInfo: [
+                NSLocalizedDescriptionKey: CloudKitAvailability.unavailableMessage
+            ])
+        }
+
         // Restore an existing share first — upgrade permission if it was created with .none.
         if let existing = try await fetchPersistedShare() {
             let upgraded = try await ensureReadWritePermission(existing)
@@ -90,6 +96,12 @@ final class CloudKitSharingCoordinator {
     /// Callback-based share preparation — used by SharePlanSheet and
     /// UICloudSharingController's preparationHandler.
     func prepareShare(completion: @escaping (CKShare?, CKContainer, Error?) -> Void) {
+        guard let container else {
+            completion(nil, CKContainer.default(), NSError(domain: "CloudKitSharing", code: 3, userInfo: [
+                NSLocalizedDescriptionKey: CloudKitAvailability.unavailableMessage
+            ]))
+            return
+        }
         Task {
             do {
                 completion(try await loadOrCreateShare(), container, nil)
@@ -100,6 +112,7 @@ final class CloudKitSharingCoordinator {
     }
 
     func checkAccountStatus() async {
+        guard let container else { iCloudStatus = .noAccount; return }
         do {
             iCloudStatus = try await container.accountStatus()
         } catch {
@@ -110,6 +123,7 @@ final class CloudKitSharingCoordinator {
     /// Reconnects to a previously created share without creating a new one.
     /// Call on `.onAppear` so the sharing UI reflects an existing share.
     func refreshExistingShare() async {
+        guard let container else { return }
         if let existing = try? await fetchPersistedShare() {
             applyShare(existing)
         }
@@ -118,7 +132,7 @@ final class CloudKitSharingCoordinator {
 
     /// Reload participant list and share URL from CloudKit.
     func refreshShare() async {
-        guard let share = currentShare else { return }
+        guard let container, let share = currentShare else { return }
         do {
             if let refreshed = try await container.privateCloudDatabase.record(for: share.recordID) as? CKShare {
                 applyShare(refreshed)
@@ -129,7 +143,7 @@ final class CloudKitSharingCoordinator {
     }
 
     func stopSharing() async {
-        guard let share = currentShare else { return }
+        guard let container, let share = currentShare else { return }
         isLoading = true
         defer { isLoading = false }
 
@@ -146,7 +160,7 @@ final class CloudKitSharingCoordinator {
     }
 
     func remove(participant: CKShare.Participant) async {
-        guard let share = currentShare else { return }
+        guard let container, let share = currentShare else { return }
         share.removeParticipant(participant)
         do {
             let results = try await container.privateCloudDatabase.modifyRecords(saving: [share], deleting: [])
@@ -160,6 +174,7 @@ final class CloudKitSharingCoordinator {
 
     /// Called from AppDelegate when the user taps an iMessage/Mail share link.
     func accept(shareMetadata: CKShare.Metadata) async {
+        guard let container else { return }
         do {
             _ = try await container.accept(shareMetadata)
         } catch {
@@ -189,7 +204,7 @@ final class CloudKitSharingCoordinator {
     /// who taps the link ("Item Unavailable"). Upgrade it to .readWrite so any recipient
     /// of the URL can accept without needing to be pre-approved.
     private func ensureReadWritePermission(_ share: CKShare) async throws -> CKShare {
-        guard share.publicPermission != .readWrite else { return share }
+        guard let container, share.publicPermission != .readWrite else { return share }
         share.publicPermission = .readWrite
         let results = try await container.privateCloudDatabase.modifyRecords(saving: [share], deleting: [])
         return (try results.saveResults[share.recordID]?.get() as? CKShare) ?? share
@@ -198,6 +213,8 @@ final class CloudKitSharingCoordinator {
     /// Returns the existing CKShare, checking UserDefaults first then scanning the zone
     /// directly on the server. The zone scan handles reinstalls where UserDefaults was cleared.
     private func fetchPersistedShare() async throws -> CKShare? {
+        guard let container else { return nil }
+
         // 1. Fast path: cached record ID in UserDefaults
         if let data = UserDefaults.standard.data(forKey: shareRecordIDKey),
            let recordID = try? NSKeyedUnarchiver.unarchivedObject(ofClass: CKRecord.ID.self, from: data) {
@@ -217,6 +234,8 @@ final class CloudKitSharingCoordinator {
     /// Fetches the CKShare record from the dedicated shared-plan zone by scanning all
     /// zone records with a nil server token. Returns nil if the zone doesn't exist yet.
     private func fetchShareFromZone() async throws -> CKShare? {
+        guard let container else { return nil }
+
         final class State {
             var share: CKShare?
             var nextToken: CKServerChangeToken?
