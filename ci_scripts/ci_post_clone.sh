@@ -16,6 +16,10 @@
 #  where Info.plist wants SUPABASE_PUBLISHABLE_KEY did exactly that to the
 #  Recipe Store. Hence the explicit check at the end.
 #
+#  GOOGLE_API_KEY is optional: recipe import and meal suggestions run on device
+#  or on Ollama by default, and the app hides the Gemini provider in builds
+#  without a key.
+#
 
 set -eu
 
@@ -36,9 +40,9 @@ SUPABASE_PUBLISHABLE_KEY = ${SUPABASE_PUBLISHABLE_KEY}
 ADMIN_PASSWORD = ${ADMIN_PASSWORD:-}
 EOF
 
-# Fail loudly if a variable was missing, instead of shipping an empty key.
+# Fail loudly if a required variable was missing, instead of shipping an empty key.
 missing=""
-for key in GOOGLE_API_KEY SUPABASE_URL SUPABASE_PUBLISHABLE_KEY ADMIN_PASSWORD; do
+for key in SUPABASE_URL SUPABASE_PUBLISHABLE_KEY ADMIN_PASSWORD; do
     if ! grep -qE "^${key} = .+" KitchenOS/Config.xcconfig; then
         missing="${missing} ${key}"
     fi
@@ -48,6 +52,10 @@ if [ -n "${missing}" ]; then
     echo "❌ Empty value(s) for:${missing}"
     echo "   Set them in the Xcode Cloud workflow's environment variables."
     exit 1
+fi
+
+if [ -z "${GOOGLE_API_KEY:-}" ]; then
+    echo "ℹ️ No GOOGLE_API_KEY — building without the Gemini provider."
 fi
 
 echo "✅ Config.xcconfig created successfully!"

@@ -73,7 +73,7 @@ struct SettingsView: View {
                 // --- AI ENGINE SECTION ---
                 Section(header: Text("AI Engine"), footer: aiEngineFooter) {
                     Picker(selection: $aiProviderRaw) {
-                        ForEach(AIProvider.allCases) { provider in
+                        ForEach(AIProvider.allCases.filter(\.isAvailable)) { provider in
                             Text(provider.displayName).tag(provider.rawValue)
                         }
                     } label: {

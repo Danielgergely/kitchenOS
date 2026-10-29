@@ -26,7 +26,13 @@ enum AIProvider: String, CaseIterable, Identifiable {
 
     static var current: AIProvider {
         let raw = UserDefaults.standard.string(forKey: storageKey) ?? AIProvider.automatic.rawValue
-        return AIProvider(rawValue: raw) ?? .automatic
+        let provider = AIProvider(rawValue: raw) ?? .automatic
+        return provider.isAvailable ? provider : .automatic
+    }
+
+    /// Gemini needs an API key, which builds may ship without (CI treats it as optional).
+    var isAvailable: Bool {
+        self != .gemini || !Secrets.googleApiKey.isEmpty
     }
 
     var displayName: String {
