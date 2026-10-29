@@ -11,13 +11,13 @@
 #  https://developer.apple.com/documentation/xcode/setting-the-next-build-number-for-xcode-cloud-builds
 #
 #  CI_BUILD_NUMBER increments per Xcode Cloud build but starts low, so it is
-#  offset past the highest build already uploaded by hand (41, on 2026-09-21).
+#  offset past the highest build already uploaded by hand (42, on 2026-10-29).
 #  Raise BUILD_NUMBER_OFFSET only if a build is ever uploaded outside CI again.
 #
 
 set -eu
 
-BUILD_NUMBER_OFFSET=41
+BUILD_NUMBER_OFFSET=42
 
 if [ -z "${CI_BUILD_NUMBER:-}" ]; then
     echo "⚠️  CI_BUILD_NUMBER is not set — not running in Xcode Cloud. Leaving the build number alone."
