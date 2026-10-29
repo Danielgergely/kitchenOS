@@ -15,8 +15,7 @@ class AIService {
     private let fallbackModels = [
         "gemini-2.5-flash",
         "gemini-3-flash-preview",
-        "gemini-2.5-flash-lite",
-        "gemini-2.5-pro"
+        "gemini-2.5-flash-lite"
     ]
     
     func getRecipeExtractionAIPrompt(extractFromText: String, tagList: String) -> String {
@@ -93,12 +92,18 @@ class AIService {
             separator: ", "
         )
         
-        let prompt = getRecipeExtractionAIPrompt(
-            extractFromText: "this image",
-            tagList: tagList
-        )
-        
-        return try await callLLM(prompt: prompt, content: image)
+        switch AIProvider.current {
+        case .automatic:
+            return try await extractOnDevice(image: image, availableTags: availableTags)
+        case .local:
+            return try await extractLocally(image: image, availableTags: availableTags)
+        case .gemini:
+            let prompt = getRecipeExtractionAIPrompt(
+                extractFromText: "this image",
+                tagList: tagList
+            )
+            return try await callLLM(prompt: prompt, content: image)
+        }
     }
     
     func extractRecipeFromURL(from url: URL, availableTags: [String] = []) async throws -> ExtractedRecipe {
@@ -138,12 +143,169 @@ class AIService {
 
         // Fallback: the page has no structured data, so use the LLM.
         print("ℹ️ No JSON-LD found — falling back to AI extraction.")
-        let prompt = getRecipeExtractionAIPrompt(
-            extractFromText: "the provided website HTML",
-            tagList: tagList
-        )
+        if AIProvider.current == .gemini {
+            let prompt = getRecipeExtractionAIPrompt(
+                extractFromText: "the provided website HTML",
+                tagList: tagList
+            )
+            return try await callLLM(prompt: prompt, content: htmlContent)
+        }
 
-        return try await callLLM(prompt: prompt, content: htmlContent)
+        // Local models' context can't take a whole raw page; send its text.
+        let pageText = await Task.detached(priority: .userInitiated) {
+            WebPageText.readableText(fromHTML: htmlContent)
+        }.value
+        switch AIProvider.current {
+        case .automatic:
+            return try await extractOnDevice(pageText: pageText, availableTags: availableTags)
+        case .local, .gemini:
+            return try await extractLocally(pageText: pageText, availableTags: availableTags)
+        }
+    }
+
+    // MARK: - Automatic (on device first)
+
+    /// The best free option this device has: Apple's on-device model, then the
+    /// Mac if one is set up, then plain rules — which always work, offline.
+    private func extractOnDevice(image: UIImage, availableTags: [String]) async throws -> ExtractedRecipe {
+        let lines = try await TextRecognizer.lines(in: image)
+        return try await extractOnDevice(
+            text: lines.joined(separator: "\n"),
+            lines: lines,
+            availableTags: availableTags,
+            viaMac: { try await self.extractLocally(image: image, availableTags: availableTags) }
+        )
+    }
+
+    private func extractOnDevice(pageText: String, availableTags: [String]) async throws -> ExtractedRecipe {
+        let lines = pageText.components(separatedBy: "\n").filter { !$0.hasPrefix("og:image:") }
+        var recipe = try await extractOnDevice(
+            text: lines.joined(separator: "\n"),
+            lines: lines,
+            availableTags: availableTags,
+            viaMac: { try await self.extractLocally(pageText: pageText, availableTags: availableTags) }
+        )
+        if recipe.imageUrl == nil, let image = pageText.firstMatch(of: /^og:image: (.+)$/.anchorsMatchLineEndings()) {
+            recipe = recipe.withImageURL(String(image.1))
+        }
+        return recipe
+    }
+
+    private func extractOnDevice(
+        text: String,
+        lines: [String],
+        availableTags: [String],
+        viaMac: () async throws -> ExtractedRecipe
+    ) async throws -> ExtractedRecipe {
+        if OnDeviceModel.isAvailable {
+            do {
+                print("📱 Extracting with Apple's on-device model")
+                return try await OnDeviceModel.extractRecipe(fromText: text, availableTags: availableTags)
+            } catch {
+                print("⚠️ On-device model failed: \(error.localizedDescription) — trying the next option.")
+            }
+        }
+        if OllamaSettings.isConfigured {
+            do {
+                return try await viaMac()
+            } catch {
+                print("⚠️ Mac extraction failed: \(error.localizedDescription) — falling back to rules.")
+            }
+        }
+        print("📝 Parsing the text with rules")
+        return RecipeTextParser.parse(lines: lines)
+    }
+
+    // MARK: - Local (Ollama)
+
+    private func extractLocally(image: UIImage, availableTags: [String]) async throws -> ExtractedRecipe {
+        // Large enough to keep small print legible, small enough to keep the
+        // request (and the model's image tokens) modest.
+        guard let jpeg = image.optimizedForDatabase(maxDimension: 1600, compressionQuality: 0.85) else {
+            throw NSError(
+                domain: "AIService",
+                code: -4,
+                userInfo: [NSLocalizedDescriptionKey: "Couldn't prepare the photo for extraction."]
+            )
+        }
+        let prompt = getRecipeExtractionAIPrompt(extractFromText: "this image", tagList: tagListText(availableTags))
+        return try await extractLocally(prompt: prompt, images: [jpeg], availableTags: availableTags, allowsImageURL: false)
+    }
+
+    private func extractLocally(pageText: String, availableTags: [String]) async throws -> ExtractedRecipe {
+        let prompt = getRecipeExtractionAIPrompt(
+            extractFromText: "the website text below (the og:image line, if present, is the main recipe image)",
+            tagList: tagListText(availableTags)
+        ) + "\n\nWEBSITE TEXT:\n" + pageText
+        return try await extractLocally(prompt: prompt, availableTags: availableTags, allowsImageURL: true)
+    }
+
+    private func tagListText(_ tags: [String]) -> String {
+        tags.isEmpty ? "None available" : tags.joined(separator: ", ")
+    }
+
+    private func extractLocally(prompt: String, images: [Data] = [], availableTags: [String], allowsImageURL: Bool) async throws -> ExtractedRecipe {
+        let client = try OllamaClient.fromSettings()
+        print("🖥️ Extracting with local model \(client.model) at \(client.baseURL)")
+        let data = try await client.chatJSON(
+            prompt: prompt,
+            images: images,
+            schema: recipeSchema(availableTags: availableTags, allowsImageURL: allowsImageURL)
+        )
+        return try JSONDecoder().decode(ExtractedRecipe.self, from: data)
+    }
+
+    /// JSON schema for ExtractedRecipe. Ollama constrains generation to it, so
+    /// the type, units and tags can only be values the app understands. A photo
+    /// has no image URL to report and models invent one if allowed, so the field
+    /// is left out for photos (a `"null"`-only type makes Ollama generate forever).
+    private func recipeSchema(availableTags: [String], allowsImageURL: Bool) -> [String: Any] {
+        let string: [String: Any] = ["type": "string"]
+        let integer: [String: Any] = ["type": "integer"]
+        let tagItem: [String: Any] = availableTags.isEmpty ? string : ["type": "string", "enum": availableTags]
+        let ingredient: [String: Any] = [
+            "type": "object",
+            "properties": [
+                "name": string,
+                "amount": ["type": "number"],
+                "unit": ["type": "string", "enum": Unit.allCases.map { $0.rawValue }],
+            ],
+            "required": ["name", "amount", "unit"],
+        ]
+        var properties: [String: Any] = [
+            "title": string,
+            "summary": string,
+            "instructions": string,
+            "prepTime": integer,
+            "cookTime": integer,
+            "type": ["type": "string", "enum": FoodType.allCases.map { $0.rawValue }],
+            "tags": ["type": "array", "items": tagItem],
+            "ingredients": ["type": "array", "items": ingredient],
+        ]
+        var required = ["title", "summary", "instructions", "prepTime", "cookTime",
+                        "type", "tags", "ingredients"]
+        if allowsImageURL {
+            properties["imageUrl"] = ["type": ["string", "null"]]
+            required.append("imageUrl")
+        }
+        return ["type": "object", "properties": properties, "required": required]
+    }
+
+    /// JSON schema for exactly three recommendations whose IDs must come from the catalog.
+    private func recommendationSchema(recipeIds: [String]) -> [String: Any] {
+        [
+            "type": "array",
+            "minItems": 3,
+            "maxItems": 3,
+            "items": [
+                "type": "object",
+                "properties": [
+                    "recipeId": ["type": "string", "enum": recipeIds],
+                    "reason": ["type": "string"],
+                ],
+                "required": ["recipeId", "reason"],
+            ],
+        ]
     }
     
     func recommendFromLibrary(context: RecommendationContext, preferences: UserPreferences, upcomingMeals: [PlannedMeal], pastMeals: [PlannedMeal], availableRecipes: [Recipe]) async throws -> [LibraryRecommendationResult] {
@@ -155,13 +317,6 @@ class AIService {
                 userInfo: [NSLocalizedDescriptionKey: "No recipes in library."]
             )
         }
-            
-        let config = GenerationConfig(responseMIMEType: "application/json")
-        let model = GenerativeModel(
-            name: "gemini-3-flash-preview",
-            apiKey: Secrets.googleApiKey,
-            generationConfig: config
-        )
             
         // 1. Format Constraints
         let upcomingTitles = upcomingMeals.compactMap { $0.displayTitle }.joined(
@@ -228,12 +383,45 @@ class AIService {
             ]            
             """
                     
-        let response = try await model.generateContent(prompt)
-        
-        guard let text = response.text, let data = text.data(using: .utf8) else {
-            throw NSError(domain: "AIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response from AI."])
+        func ruleBasedPicks() -> [LibraryRecommendationResult] {
+            RuleBasedRecommender.recommend(
+                context: context,
+                preferences: preferences,
+                upcomingMeals: upcomingMeals,
+                pastMeals: pastMeals,
+                availableRecipes: availableRecipes
+            )
         }
-        
-        return try JSONDecoder().decode([LibraryRecommendationResult].self, from: data)    }
+        let schema = recommendationSchema(recipeIds: availableRecipes.map { $0.id.uuidString })
+
+        let data: Data
+        switch AIProvider.current {
+        case .automatic:
+            // Apple's on-device model can't hold a whole recipe catalog in its
+            // context, so use the Mac if one is set up, otherwise plain rules.
+            guard OllamaSettings.isConfigured else { return ruleBasedPicks() }
+            do {
+                data = try await OllamaClient.fromSettings().chatJSON(prompt: prompt, schema: schema)
+            } catch {
+                print("⚠️ Mac recommendations failed: \(error.localizedDescription) — falling back to rules.")
+                return ruleBasedPicks()
+            }
+        case .local:
+            data = try await OllamaClient.fromSettings().chatJSON(prompt: prompt, schema: schema)
+        case .gemini:
+            let model = GenerativeModel(
+                name: "gemini-3-flash-preview",
+                apiKey: Secrets.googleApiKey,
+                generationConfig: config
+            )
+            let response = try await model.generateContent(prompt)
+            guard let text = response.text, let geminiData = text.data(using: .utf8) else {
+                throw NSError(domain: "AIService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response from AI."])
+            }
+            data = geminiData
+        }
+
+        return try JSONDecoder().decode([LibraryRecommendationResult].self, from: data)
+    }
 }
 

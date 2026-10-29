@@ -66,7 +66,12 @@ exactly as before. Set `KITCHENOS_ENABLE_CLOUDKIT=1` in the scheme to opt back i
 
 **External integrations:** API keys live in `KitchenOS/Config.xcconfig` (not checked in to version control) and are surfaced through `ConfigService`/`Secrets`. The app uses Google Gemini via `AIService` (recipe extraction from images/URLs, and library recommendations) and Supabase (recipe store, `RecipeStoreService` + `AdminPublishService`).
 
-URL recipe import tries `RecipeJSONLDExtractor` (schema.org JSON-LD, free and on-device) first and only falls back to Gemini when a page has no structured data. `RecipeLanguage` (Settings → Recipe Language) decides the language the model writes the extracted recipe in.
+URL recipe import tries `RecipeJSONLDExtractor` (schema.org JSON-LD, free and on-device) first and only falls back to a model when a page has no structured data. `RecipeLanguage` (Settings → Recipe Language) decides the language the model writes the extracted recipe in.
+
+`AIProvider` (Settings → AI Engine) picks what `AIService` uses for extraction and recommendations:
+- `.automatic` (default, free): photos go through `TextRecognizer` (Vision OCR), then `OnDeviceModel` (Apple Foundation Models, only where Apple Intelligence is available), then the Mac if `OllamaSettings.isConfigured`, then `RecipeTextParser` (plain rules, works everywhere). Recommendations use the Mac if configured, else `RuleBasedRecommender`.
+- `.local`: always `OllamaClient` — an Ollama server, typically the owner's Mac reached over Tailscale. Requests send a JSON schema as `format` and `think: false` (thinking models otherwise take minutes). Don't use a `"null"`-only schema type; Ollama generates forever — omit the field instead.
+- `.gemini`: the original paid path.
 
 ## SourceKit False Positives
 

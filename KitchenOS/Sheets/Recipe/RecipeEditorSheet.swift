@@ -36,6 +36,7 @@ struct RecipeEditorSheet: View {
     @State private var showCamera = false
     @State private var aiScanPhotoItem: PhotosPickerItem?
     @State private var isScanning = false
+    @State private var scanError: String?
     
     // AI stuff
     @State private var showingImageSourceDialog = false
@@ -305,6 +306,14 @@ struct RecipeEditorSheet: View {
             } message: {
                 Text("Paste the link to the recipe.")
             }
+            .alert("Import Failed", isPresented: Binding(
+                get: { scanError != nil },
+                set: { if !$0 { scanError = nil } }
+            )) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(scanError ?? "")
+            }
             .alert("Delete recipe?", isPresented: $showingDeleteConfirmation) {
                 Button("Delete", role: .destructive) {
                     deleteRecipe()
@@ -446,6 +455,7 @@ struct RecipeEditorSheet: View {
                       coverImageData: coverImageData)
             } catch {
                 print("AI Extraction Failed: \(error.localizedDescription)")
+                scanError = error.localizedDescription
             }
         }
     }

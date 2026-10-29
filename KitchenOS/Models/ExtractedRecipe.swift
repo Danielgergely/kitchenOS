@@ -15,3 +15,11 @@ struct ExtractedRecipe: Codable {
     let ingredients: [ExtractedIngredient]?
     let imageUrl: String?
 }
+
+extension ExtractedRecipe {
+    func withImageURL(_ url: String) -> ExtractedRecipe {
+        ExtractedRecipe(title: title, summary: summary, instructions: instructions,
+                        prepTime: prepTime, cookTime: cookTime, type: type, tags: tags,
+                        ingredients: ingredients, imageUrl: url)
+    }
+}

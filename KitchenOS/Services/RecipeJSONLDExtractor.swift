@@ -142,10 +142,17 @@ nonisolated enum RecipeJSONLDExtractor {
     // MARK: - Ingredient string → name / amount / unit
 
     /// Lightweight parse of "1 1/2 cups all-purpose flour" → (1.5, cup, "all-purpose flour").
-    private static func parseIngredient(_ raw: String) -> ExtractedIngredient {
+    /// Also used by RecipeTextParser for ingredient lines read from photos.
+    static func parseIngredient(_ raw: String) -> ExtractedIngredient {
         let text = cleanText(raw)
         var tokens = text.split(separator: " ").map(String.init)
         guard !tokens.isEmpty else { return ExtractedIngredient(name: text, amount: nil, unit: nil) }
+
+        // "200g" → "200", "g", as European recipes usually write it.
+        if let glued = tokens[0].firstMatch(of: /^(\d+(?:[.,]\d+)?)([A-Za-zäöüÄÖÜ]+)$/),
+           matchUnit(String(glued.2)) != nil {
+            tokens.replaceSubrange(0...0, with: [String(glued.1), String(glued.2)])
+        }
 
         var amount: Double?
         if let first = quantity(from: tokens[0]) {
@@ -208,7 +215,10 @@ nonisolated enum RecipeJSONLDExtractor {
         "lb": "lbs", "lbs": "lbs", "pound": "lbs", "pounds": "lbs",
         "slice": "slice", "slices": "slice",
         "pack": "pack", "packs": "pack", "package": "pack", "packages": "pack",
-        "piece": "piece", "pieces": "piece", "pcs": "piece", "pc": "piece"
+        "piece": "piece", "pieces": "piece", "pcs": "piece", "pc": "piece",
+        // German
+        "el": "tbsp", "tl": "tsp", "stk": "piece", "stück": "piece",
+        "scheibe": "slice", "scheiben": "slice", "pkg": "pack", "packung": "pack"
     ]
 
     private static func matchUnit(_ token: String) -> String? {
