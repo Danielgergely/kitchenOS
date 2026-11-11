@@ -163,6 +163,35 @@ class AIService {
         }
     }
 
+    /// Plain text pasted in or read from a file — e.g. an Apple Notes recipe.
+    func extractRecipeFromText(_ text: String, availableTags: [String] = []) async throws -> ExtractedRecipe {
+        let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else {
+            throw NSError(
+                domain: "AIService",
+                code: -5,
+                userInfo: [NSLocalizedDescriptionKey: "There's no text to import."]
+            )
+        }
+        switch AIProvider.current {
+        case .automatic:
+            return try await extractOnDevice(
+                text: text,
+                lines: text.components(separatedBy: .newlines),
+                availableTags: availableTags,
+                viaMac: { try await self.extractLocally(noteText: text, availableTags: availableTags) }
+            )
+        case .local:
+            return try await extractLocally(noteText: text, availableTags: availableTags)
+        case .gemini:
+            let prompt = getRecipeExtractionAIPrompt(
+                extractFromText: "the recipe text below (there is no image, return null for imageUrl)",
+                tagList: tagListText(availableTags)
+            )
+            return try await callLLM(prompt: prompt, content: text)
+        }
+    }
+
     // MARK: - Automatic (on device first)
 
     /// The best free option this device has: Apple's on-device model, then the
@@ -238,6 +267,14 @@ class AIService {
             tagList: tagListText(availableTags)
         ) + "\n\nWEBSITE TEXT:\n" + pageText
         return try await extractLocally(prompt: prompt, availableTags: availableTags, allowsImageURL: true)
+    }
+
+    private func extractLocally(noteText: String, availableTags: [String]) async throws -> ExtractedRecipe {
+        let prompt = getRecipeExtractionAIPrompt(
+            extractFromText: "the recipe text below",
+            tagList: tagListText(availableTags)
+        ) + "\n\nRECIPE TEXT:\n" + noteText
+        return try await extractLocally(prompt: prompt, availableTags: availableTags, allowsImageURL: false)
     }
 
     private func tagListText(_ tags: [String]) -> String {

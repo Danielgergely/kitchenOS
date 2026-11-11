@@ -43,6 +43,7 @@ struct RecipeEditorSheet: View {
     @State private var showingImagePicker = false
     
     @State private var showURLSelector = false
+    @State private var showTextImport = false
     @State private var urlString = ""
     
     @State private var imageSourceType: UIImagePickerController.SourceType = .photoLibrary
@@ -267,6 +268,9 @@ struct RecipeEditorSheet: View {
                 Button("From URL") {
                     showURLSelector = true
                 }
+                Button("From Text or Notes") {
+                    showTextImport = true
+                }
                 PhotosPicker("Choose from Library", selection: $aiScanPhotoItem, matching: .images)
                 Button("Cancel", role: .cancel) {}
             }
@@ -336,6 +340,9 @@ struct RecipeEditorSheet: View {
             .fullScreenCover(isPresented: $showingImagePicker) {
                 ImagePicker(image: $selectedImageData, sourceType: imageSourceType)
                     .ignoresSafeArea()
+            }
+            .sheet(isPresented: $showTextImport) {
+                TextImportSheet { extractFromTextWithAI($0) }
             }
             .sheet(isPresented: $showingTagSelector) {
                 TagSelectorSheet(selectedTags: $tempTags)
@@ -430,7 +437,11 @@ struct RecipeEditorSheet: View {
         scan(downloadsCoverImage: true) { try await AIService.shared.extractRecipeFromURL(from: url, availableTags: $0) }
     }
 
-    /// Shared plumbing for both AI import paths: flip the spinner, run the extractor,
+    func extractFromTextWithAI(_ text: String) {
+        scan { try await AIService.shared.extractRecipeFromText(text, availableTags: $0) }
+    }
+
+    /// Shared plumbing for all AI import paths: flip the spinner, run the extractor,
     /// optionally fetch the cover image it found, then fill the form.
     private func scan(
         downloadsCoverImage: Bool = false,
