@@ -5,25 +5,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Build & Deploy
 
 ```bash
-# Build (release, for device)
+# Build (release, for device) — local check only
 xcodebuild -scheme KitchenOS -destination 'generic/platform=iOS' -configuration Release build
-
-# Bump build number (always do this before archiving)
-agvtool bump -all
-
-# Archive + upload to TestFlight in one step
-xcodebuild archive \
-  -scheme KitchenOS -configuration Release \
-  -destination 'generic/platform=iOS' \
-  -archivePath /tmp/KitchenOS_buildN.xcarchive
-
-xcodebuild -exportArchive \
-  -archivePath /tmp/KitchenOS_buildN.xcarchive \
-  -exportPath /tmp/KitchenOS_buildN_export \
-  -exportOptionsPlist ExportOptions.plist
 ```
 
-The `ExportOptions.plist` at the project root is configured for `app-store-connect` with automatic signing. The export step also uploads to App Store Connect.
+**Release = push to `master`.** Xcode Cloud's Release Workflow archives and uploads
+to App Store Connect, and sets the build number itself (next build number lives in
+App Store Connect → Xcode Cloud → Settings). Never archive/upload by hand or bump
+`CURRENT_PROJECT_VERSION`: a manual upload takes a number Xcode Cloud then reuses,
+and its upload fails with "The bundle version must be higher than the previously
+uploaded version". `ci_scripts/ci_post_clone.sh` writes `Config.xcconfig` from the
+workflow's environment variables. Submitting for App Store review happens in App
+Store Connect.
 
 ## Tests
 
